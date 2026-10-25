@@ -1,0 +1,1292 @@
+{
+  "schemaVersion": 2,
+  "imageSha256": "1eaaa77811f87c7a623468c69f533e6f1221fea1f1112e60d2ca82315ed78f90",
+  "width": 724,
+  "height": 424,
+  "provenance": {
+    "kind": "manual-reference",
+    "status": "initial-review",
+    "description": "Anotación visual inicial de un único plano. Requiere revisión independiente; no es una validación de precisión general.",
+    "usedForTraining": false
+  },
+  "evaluation": {
+    "objectCategories": [
+      "door",
+      "window",
+      "bed",
+      "sofa",
+      "table"
+    ],
+    "bboxIouThreshold": 0.5,
+    "wallMetric": "raster-union-IoU",
+    "boxDefinition": "Puertas y ventanas: huella de la abertura; mobiliario: huella exterior del símbolo. No se incluyen arcos de giro en cajas de puerta.",
+    "scope": "Las categorías evaluadas se anotaron de forma exhaustiva según la lectura visual inicial. Sillas y equipamiento son anotaciones auxiliares no evaluadas."
+  },
+  "walls": [
+    {
+      "id": "ref-wall-1",
+      "axis": "h",
+      "c": 35,
+      "from": 19,
+      "to": 43,
+      "thickness": 7
+    },
+    {
+      "id": "ref-wall-2",
+      "axis": "h",
+      "c": 35,
+      "from": 96,
+      "to": 135,
+      "thickness": 7
+    },
+    {
+      "id": "ref-wall-3",
+      "axis": "h",
+      "c": 35,
+      "from": 175,
+      "to": 280,
+      "thickness": 7
+    },
+    {
+      "id": "ref-wall-4",
+      "axis": "h",
+      "c": 35,
+      "from": 320,
+      "to": 352,
+      "thickness": 7
+    },
+    {
+      "id": "ref-wall-5",
+      "axis": "h",
+      "c": 35,
+      "from": 370,
+      "to": 431,
+      "thickness": 7
+    },
+    {
+      "id": "ref-wall-6",
+      "axis": "h",
+      "c": 35,
+      "from": 468,
+      "to": 566,
+      "thickness": 7
+    },
+    {
+      "id": "ref-wall-7",
+      "axis": "h",
+      "c": 35,
+      "from": 614,
+      "to": 677,
+      "thickness": 7
+    },
+    {
+      "id": "ref-wall-8",
+      "axis": "v",
+      "c": 22.5,
+      "from": 33,
+      "to": 158,
+      "thickness": 7
+    },
+    {
+      "id": "ref-wall-9",
+      "axis": "v",
+      "c": 22.5,
+      "from": 205,
+      "to": 267,
+      "thickness": 7
+    },
+    {
+      "id": "ref-wall-10",
+      "axis": "v",
+      "c": 673,
+      "from": 33,
+      "to": 112,
+      "thickness": 7
+    },
+    {
+      "id": "ref-wall-11",
+      "axis": "v",
+      "c": 673,
+      "from": 159,
+      "to": 214,
+      "thickness": 7
+    },
+    {
+      "id": "ref-wall-12",
+      "axis": "v",
+      "c": 673,
+      "from": 261,
+      "to": 315,
+      "thickness": 7
+    },
+    {
+      "id": "ref-wall-13",
+      "axis": "v",
+      "c": 673,
+      "from": 361,
+      "to": 406,
+      "thickness": 7
+    },
+    {
+      "id": "ref-wall-14",
+      "axis": "h",
+      "c": 264,
+      "from": 19,
+      "to": 53,
+      "thickness": 7
+    },
+    {
+      "id": "ref-wall-15",
+      "axis": "h",
+      "c": 264,
+      "from": 99,
+      "to": 151,
+      "thickness": 7
+    },
+    {
+      "id": "ref-wall-16",
+      "axis": "h",
+      "c": 264,
+      "from": 200,
+      "to": 266,
+      "thickness": 7
+    },
+    {
+      "id": "ref-wall-17",
+      "axis": "h",
+      "c": 264,
+      "from": 301,
+      "to": 333,
+      "thickness": 7
+    },
+    {
+      "id": "ref-wall-18",
+      "axis": "h",
+      "c": 264,
+      "from": 352,
+      "to": 407,
+      "thickness": 7
+    },
+    {
+      "id": "ref-wall-19",
+      "axis": "h",
+      "c": 403,
+      "from": 443,
+      "to": 479,
+      "thickness": 7
+    },
+    {
+      "id": "ref-wall-20",
+      "axis": "h",
+      "c": 403,
+      "from": 528,
+      "to": 592,
+      "thickness": 7
+    },
+    {
+      "id": "ref-wall-21",
+      "axis": "h",
+      "c": 403,
+      "from": 640,
+      "to": 677,
+      "thickness": 7
+    },
+    {
+      "id": "ref-wall-22",
+      "axis": "v",
+      "c": 444,
+      "from": 237,
+      "to": 292,
+      "thickness": 7
+    },
+    {
+      "id": "ref-wall-23",
+      "axis": "v",
+      "c": 444,
+      "from": 337,
+      "to": 406,
+      "thickness": 7
+    },
+    {
+      "id": "ref-wall-24",
+      "axis": "h",
+      "c": 135,
+      "from": 53,
+      "to": 155,
+      "thickness": 5
+    },
+    {
+      "id": "ref-wall-25",
+      "axis": "h",
+      "c": 135,
+      "from": 182,
+      "to": 207,
+      "thickness": 5
+    },
+    {
+      "id": "ref-wall-26",
+      "axis": "v",
+      "c": 133,
+      "from": 37,
+      "to": 73,
+      "thickness": 5
+    },
+    {
+      "id": "ref-wall-27",
+      "axis": "v",
+      "c": 133,
+      "from": 97,
+      "to": 136,
+      "thickness": 5
+    },
+    {
+      "id": "ref-wall-28",
+      "axis": "v",
+      "c": 205,
+      "from": 37,
+      "to": 137,
+      "thickness": 5
+    },
+    {
+      "id": "ref-wall-29",
+      "axis": "v",
+      "c": 205,
+      "from": 163,
+      "to": 264,
+      "thickness": 5
+    },
+    {
+      "id": "ref-wall-30",
+      "axis": "h",
+      "c": 134,
+      "from": 205,
+      "to": 295,
+      "thickness": 5
+    },
+    {
+      "id": "ref-wall-31",
+      "axis": "h",
+      "c": 134,
+      "from": 320,
+      "to": 344,
+      "thickness": 5
+    },
+    {
+      "id": "ref-wall-32",
+      "axis": "h",
+      "c": 134,
+      "from": 373,
+      "to": 427,
+      "thickness": 5
+    },
+    {
+      "id": "ref-wall-33",
+      "axis": "h",
+      "c": 134,
+      "from": 453,
+      "to": 543,
+      "thickness": 5
+    },
+    {
+      "id": "ref-wall-34",
+      "axis": "v",
+      "c": 344,
+      "from": 37,
+      "to": 136,
+      "thickness": 5
+    },
+    {
+      "id": "ref-wall-35",
+      "axis": "v",
+      "c": 403,
+      "from": 37,
+      "to": 136,
+      "thickness": 5
+    },
+    {
+      "id": "ref-wall-36",
+      "axis": "v",
+      "c": 542,
+      "from": 38,
+      "to": 137,
+      "thickness": 5
+    },
+    {
+      "id": "ref-wall-37",
+      "axis": "h",
+      "c": 185,
+      "from": 542,
+      "to": 673,
+      "thickness": 5
+    },
+    {
+      "id": "ref-wall-38",
+      "axis": "v",
+      "c": 542,
+      "from": 164,
+      "to": 185,
+      "thickness": 5
+    },
+    {
+      "id": "ref-wall-39",
+      "axis": "h",
+      "c": 165,
+      "from": 205,
+      "to": 280,
+      "thickness": 5
+    },
+    {
+      "id": "ref-wall-40",
+      "axis": "h",
+      "c": 165,
+      "from": 306,
+      "to": 333,
+      "thickness": 5
+    },
+    {
+      "id": "ref-wall-41",
+      "axis": "h",
+      "c": 165,
+      "from": 358,
+      "to": 385,
+      "thickness": 5
+    },
+    {
+      "id": "ref-wall-42",
+      "axis": "v",
+      "c": 331,
+      "from": 165,
+      "to": 264,
+      "thickness": 5
+    },
+    {
+      "id": "ref-wall-43",
+      "axis": "v",
+      "c": 385,
+      "from": 165,
+      "to": 264,
+      "thickness": 5
+    }
+  ],
+  "objects": [
+    {
+      "id": "ref-door-1",
+      "category": "door",
+      "bbox": [
+        25,
+        133,
+        54,
+        138
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-door-2",
+      "category": "door",
+      "bbox": [
+        155,
+        133,
+        182,
+        138
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-door-3",
+      "category": "door",
+      "bbox": [
+        203,
+        137,
+        208,
+        163
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-door-4",
+      "category": "door",
+      "bbox": [
+        295,
+        132,
+        322,
+        137
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-door-5",
+      "category": "door",
+      "bbox": [
+        347,
+        132,
+        373,
+        137
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-door-6",
+      "category": "door",
+      "bbox": [
+        427,
+        132,
+        452,
+        137
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-door-7",
+      "category": "door",
+      "bbox": [
+        280,
+        163,
+        308,
+        168
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-door-8",
+      "category": "door",
+      "bbox": [
+        333,
+        163,
+        359,
+        168
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-door-9",
+      "category": "door",
+      "bbox": [
+        407,
+        261,
+        441,
+        268
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-door-10",
+      "category": "door",
+      "bbox": [
+        444,
+        190,
+        449,
+        239
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-door-11",
+      "category": "door",
+      "bbox": [
+        441,
+        292,
+        448,
+        337
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-door-12",
+      "category": "door",
+      "bbox": [
+        540,
+        137,
+        545,
+        164
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-window-1",
+      "category": "window",
+      "bbox": [
+        43,
+        29,
+        96,
+        40
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-window-2",
+      "category": "window",
+      "bbox": [
+        135,
+        29,
+        175,
+        40
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-window-3",
+      "category": "window",
+      "bbox": [
+        280,
+        29,
+        320,
+        40
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-window-4",
+      "category": "window",
+      "bbox": [
+        352,
+        29,
+        370,
+        40
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-window-5",
+      "category": "window",
+      "bbox": [
+        431,
+        29,
+        468,
+        40
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-window-6",
+      "category": "window",
+      "bbox": [
+        566,
+        29,
+        614,
+        40
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-window-7",
+      "category": "window",
+      "bbox": [
+        17,
+        158,
+        28,
+        205
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-window-8",
+      "category": "window",
+      "bbox": [
+        53,
+        259,
+        99,
+        270
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-window-9",
+      "category": "window",
+      "bbox": [
+        151,
+        259,
+        200,
+        270
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-window-10",
+      "category": "window",
+      "bbox": [
+        266,
+        259,
+        301,
+        270
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-window-11",
+      "category": "window",
+      "bbox": [
+        333,
+        259,
+        352,
+        270
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-window-12",
+      "category": "window",
+      "bbox": [
+        667,
+        112,
+        679,
+        159
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-window-13",
+      "category": "window",
+      "bbox": [
+        667,
+        214,
+        679,
+        261
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-window-14",
+      "category": "window",
+      "bbox": [
+        667,
+        315,
+        679,
+        361
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-window-15",
+      "category": "window",
+      "bbox": [
+        479,
+        398,
+        528,
+        409
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-window-16",
+      "category": "window",
+      "bbox": [
+        592,
+        398,
+        640,
+        409
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-bed-1",
+      "category": "bed",
+      "bbox": [
+        64,
+        140,
+        127,
+        204
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-bed-2",
+      "category": "bed",
+      "bbox": [
+        208,
+        42,
+        272,
+        84
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-bed-3",
+      "category": "bed",
+      "bbox": [
+        208,
+        84,
+        272,
+        118
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-bed-4",
+      "category": "bed",
+      "bbox": [
+        477,
+        42,
+        539,
+        85
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-bed-5",
+      "category": "bed",
+      "bbox": [
+        477,
+        85,
+        539,
+        118
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-bed-6",
+      "category": "bed",
+      "bbox": [
+        208,
+        185,
+        270,
+        217
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-bed-7",
+      "category": "bed",
+      "bbox": [
+        208,
+        231,
+        270,
+        262
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-sofa-1",
+      "category": "sofa",
+      "bbox": [
+        99,
+        241,
+        148,
+        263
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-sofa-2",
+      "category": "sofa",
+      "bbox": [
+        525,
+        312,
+        589,
+        332
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-sofa-3",
+      "category": "sofa",
+      "bbox": [
+        493,
+        331,
+        513,
+        375
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-sofa-4",
+      "category": "sofa",
+      "bbox": [
+        596,
+        331,
+        617,
+        375
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-table-1",
+      "category": "table",
+      "bbox": [
+        558,
+        58,
+        586,
+        104
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-table-2",
+      "category": "table",
+      "bbox": [
+        570,
+        227,
+        643,
+        253
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-table-3",
+      "category": "table",
+      "bbox": [
+        113,
+        218,
+        139,
+        242
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-table-4",
+      "category": "table",
+      "bbox": [
+        535,
+        344,
+        579,
+        364
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-chair-1",
+      "category": "chair",
+      "bbox": [
+        49,
+        216,
+        76,
+        246
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-chair-2",
+      "category": "chair",
+      "bbox": [
+        562,
+        47,
+        581,
+        59
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-chair-3",
+      "category": "chair",
+      "bbox": [
+        562,
+        102,
+        581,
+        113
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-chair-4",
+      "category": "chair",
+      "bbox": [
+        548,
+        62,
+        559,
+        78
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-chair-5",
+      "category": "chair",
+      "bbox": [
+        548,
+        89,
+        559,
+        105
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-chair-6",
+      "category": "chair",
+      "bbox": [
+        585,
+        62,
+        597,
+        78
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-chair-7",
+      "category": "chair",
+      "bbox": [
+        585,
+        89,
+        597,
+        105
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-chair-8",
+      "category": "chair",
+      "bbox": [
+        558,
+        232,
+        572,
+        247
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-chair-9",
+      "category": "chair",
+      "bbox": [
+        642,
+        232,
+        654,
+        247
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-chair-10",
+      "category": "chair",
+      "bbox": [
+        573,
+        216,
+        587,
+        229
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-chair-11",
+      "category": "chair",
+      "bbox": [
+        598,
+        216,
+        612,
+        229
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-chair-12",
+      "category": "chair",
+      "bbox": [
+        623,
+        216,
+        637,
+        229
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-chair-13",
+      "category": "chair",
+      "bbox": [
+        573,
+        251,
+        587,
+        264
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-chair-14",
+      "category": "chair",
+      "bbox": [
+        598,
+        251,
+        612,
+        264
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-chair-15",
+      "category": "chair",
+      "bbox": [
+        623,
+        251,
+        637,
+        264
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-toilet-1",
+      "category": "toilet",
+      "bbox": [
+        57,
+        37,
+        77,
+        62
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-toilet-2",
+      "category": "toilet",
+      "bbox": [
+        347,
+        60,
+        371,
+        82
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-toilet-3",
+      "category": "toilet",
+      "bbox": [
+        363,
+        170,
+        386,
+        197
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-sink-1",
+      "category": "sink",
+      "bbox": [
+        58,
+        113,
+        83,
+        134
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-sink-2",
+      "category": "sink",
+      "bbox": [
+        83,
+        113,
+        108,
+        134
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-sink-3",
+      "category": "sink",
+      "bbox": [
+        82,
+        35,
+        102,
+        59
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-sink-4",
+      "category": "sink",
+      "bbox": [
+        347,
+        42,
+        373,
+        63
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-sink-5",
+      "category": "sink",
+      "bbox": [
+        379,
+        96,
+        403,
+        125
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-sink-6",
+      "category": "sink",
+      "bbox": [
+        356,
+        207,
+        384,
+        232
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-bathtub-1",
+      "category": "bathtub",
+      "bbox": [
+        26,
+        42,
+        50,
+        98
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-bathtub-2",
+      "category": "bathtub",
+      "bbox": [
+        378,
+        40,
+        400,
+        98
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-wardrobe-1",
+      "category": "wardrobe",
+      "bbox": [
+        105,
+        36,
+        134,
+        72
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-wardrobe-2",
+      "category": "wardrobe",
+      "bbox": [
+        135,
+        36,
+        157,
+        73
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-wardrobe-3",
+      "category": "wardrobe",
+      "bbox": [
+        134,
+        96,
+        157,
+        136
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-wardrobe-4",
+      "category": "wardrobe",
+      "bbox": [
+        310,
+        165,
+        332,
+        261
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-wardrobe-5",
+      "category": "wardrobe",
+      "bbox": [
+        320,
+        38,
+        343,
+        134
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-wardrobe-6",
+      "category": "wardrobe",
+      "bbox": [
+        445,
+        163,
+        521,
+        190
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    },
+    {
+      "id": "ref-stove-1",
+      "category": "stove",
+      "bbox": [
+        649,
+        75,
+        671,
+        102
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true
+    }
+  ],
+  "assumptions": {
+    "wallHeightMeters": 2.7,
+    "doorHeightMeters": 2.1,
+    "windowSillMeters": 0.9,
+    "windowHeightMeters": 1.2,
+    "furnitureHeights": "Valores de catálogo aproximados; no inferidos del plano."
+  }
+}

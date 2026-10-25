@@ -1,0 +1,976 @@
+{
+  "imageSha256": "9f3f598dd2db7f26fa7374c0b5bbbf7764e70bda9febb9aca65243fe3389f049",
+  "confidence": 0.35,
+  "stats": {
+    "originalRegions": 24,
+    "cleanedRegions": 20,
+    "originalVertices": 3146,
+    "cleanedVertices": 1110,
+    "footprintIou": 0.9003761861091876,
+    "associatedOpenings": 21,
+    "unmatchedOpenings": 15,
+    "conservativeFallback": true,
+    "appliedTolerancePixels": 1.0599056603773584
+  },
+  "openings": [
+    {
+      "id": "opening-semantic-11",
+      "objectIds": [
+        "semantic-11"
+      ],
+      "category": "window",
+      "axis": "v",
+      "c": 1190,
+      "from": 381,
+      "to": 468,
+      "thickness": 12,
+      "confidence": 0.8978,
+      "wallId": "axis-75",
+      "reviewRequired": true
+    },
+    {
+      "id": "opening-semantic-18",
+      "objectIds": [
+        "semantic-18"
+      ],
+      "category": "window",
+      "axis": "v",
+      "c": 1190,
+      "from": 558,
+      "to": 645,
+      "thickness": 12,
+      "confidence": 0.8885,
+      "wallId": "axis-75",
+      "reviewRequired": true
+    },
+    {
+      "id": "opening-semantic-2",
+      "objectIds": [
+        "semantic-2"
+      ],
+      "category": "window",
+      "axis": "h",
+      "c": 62,
+      "from": 1001,
+      "to": 1087,
+      "thickness": 13,
+      "confidence": 0.8757,
+      "wallId": "axis-47",
+      "reviewRequired": true
+    },
+    {
+      "id": "opening-semantic-10",
+      "objectIds": [
+        "semantic-10"
+      ],
+      "category": "window",
+      "axis": "v",
+      "c": 40,
+      "from": 281,
+      "to": 365,
+      "thickness": 12,
+      "confidence": 0.8411,
+      "wallId": "axis-72",
+      "reviewRequired": true
+    },
+    {
+      "id": "opening-semantic-1",
+      "objectIds": [
+        "semantic-1"
+      ],
+      "category": "window",
+      "axis": "h",
+      "c": 62,
+      "from": 495,
+      "to": 563,
+      "thickness": 12,
+      "confidence": 0.8236,
+      "wallId": "axis-24",
+      "reviewRequired": true
+    },
+    {
+      "id": "opening-semantic-31",
+      "objectIds": [
+        "semantic-31"
+      ],
+      "category": "door",
+      "axis": "h",
+      "c": 293.5,
+      "from": 498,
+      "to": 538,
+      "thickness": 6,
+      "confidence": 0.8147,
+      "wallId": "axis-22",
+      "reviewRequired": true
+    },
+    {
+      "id": "opening-semantic-12",
+      "objectIds": [
+        "semantic-12"
+      ],
+      "category": "window",
+      "axis": "h",
+      "c": 471.5,
+      "from": 94,
+      "to": 176,
+      "thickness": 13,
+      "confidence": 0.8052,
+      "wallId": "axis-1",
+      "reviewRequired": true
+    },
+    {
+      "id": "opening-semantic-26",
+      "objectIds": [
+        "semantic-26"
+      ],
+      "category": "door",
+      "axis": "h",
+      "c": 239.5,
+      "from": 527,
+      "to": 565,
+      "thickness": 5,
+      "confidence": 0.791,
+      "wallId": "axis-26",
+      "reviewRequired": true
+    },
+    {
+      "id": "opening-semantic-28",
+      "objectIds": [
+        "semantic-28"
+      ],
+      "category": "door",
+      "axis": "h",
+      "c": 239,
+      "from": 758,
+      "to": 797,
+      "thickness": 6,
+      "confidence": 0.7854,
+      "wallId": "axis-34",
+      "reviewRequired": true
+    },
+    {
+      "id": "opening-semantic-27",
+      "objectIds": [
+        "semantic-27"
+      ],
+      "category": "door",
+      "axis": "h",
+      "c": 239.5,
+      "from": 618,
+      "to": 656,
+      "thickness": 7,
+      "confidence": 0.783,
+      "wallId": "axis-26",
+      "reviewRequired": true
+    },
+    {
+      "id": "opening-semantic-25",
+      "objectIds": [
+        "semantic-25"
+      ],
+      "category": "door",
+      "axis": "h",
+      "c": 240,
+      "from": 279,
+      "to": 318,
+      "thickness": 8,
+      "confidence": 0.7823,
+      "wallId": "axis-14",
+      "reviewRequired": true
+    },
+    {
+      "id": "opening-semantic-9",
+      "objectIds": [
+        "semantic-9"
+      ],
+      "category": "window",
+      "axis": "v",
+      "c": 1189.5,
+      "from": 241,
+      "to": 286,
+      "thickness": 11,
+      "confidence": 0.7769,
+      "wallId": "axis-63",
+      "reviewRequired": true
+    },
+    {
+      "id": "opening-semantic-7",
+      "objectIds": [
+        "semantic-7"
+      ],
+      "category": "window",
+      "axis": "h",
+      "c": 62,
+      "from": 762,
+      "to": 829,
+      "thickness": 13,
+      "confidence": 0.7742,
+      "wallId": "axis-41",
+      "reviewRequired": true
+    },
+    {
+      "id": "opening-semantic-8",
+      "objectIds": [
+        "semantic-8"
+      ],
+      "category": "window",
+      "axis": "v",
+      "c": 1189.5,
+      "from": 197,
+      "to": 219,
+      "thickness": 11,
+      "confidence": 0.7415,
+      "wallId": "axis-61",
+      "reviewRequired": true
+    },
+    {
+      "id": "opening-semantic-5",
+      "objectIds": [
+        "semantic-5",
+        "semantic-22"
+      ],
+      "category": "window",
+      "axis": "h",
+      "c": 61.5,
+      "from": 280,
+      "to": 312,
+      "thickness": 12,
+      "confidence": 0.7122,
+      "wallId": "axis-15",
+      "reviewRequired": true
+    },
+    {
+      "id": "opening-semantic-4",
+      "objectIds": [
+        "semantic-4"
+      ],
+      "category": "window",
+      "axis": "h",
+      "c": 62,
+      "from": 152,
+      "to": 172,
+      "thickness": 2,
+      "confidence": 0.6729,
+      "wallId": "axis-5",
+      "reviewRequired": true
+    },
+    {
+      "id": "opening-semantic-16",
+      "objectIds": [
+        "semantic-16"
+      ],
+      "category": "window",
+      "axis": "h",
+      "c": 471.5,
+      "from": 603,
+      "to": 616,
+      "thickness": 12,
+      "confidence": 0.5539,
+      "wallId": "axis-25",
+      "reviewRequired": true
+    },
+    {
+      "id": "opening-semantic-21",
+      "objectIds": [
+        "semantic-21"
+      ],
+      "category": "window",
+      "axis": "h",
+      "c": 724,
+      "from": 1072,
+      "to": 1082,
+      "thickness": 2,
+      "confidence": 0.5219,
+      "wallId": "axis-46",
+      "reviewRequired": true
+    },
+    {
+      "id": "opening-semantic-15",
+      "objectIds": [
+        "semantic-15"
+      ],
+      "category": "window",
+      "axis": "h",
+      "c": 475.5,
+      "from": 336,
+      "to": 344,
+      "thickness": 3,
+      "confidence": 0.4865,
+      "wallId": "axis-13",
+      "reviewRequired": true
+    },
+    {
+      "id": "opening-semantic-17",
+      "objectIds": [
+        "semantic-17"
+      ],
+      "category": "window",
+      "axis": "h",
+      "c": 476.5,
+      "from": 496,
+      "to": 504,
+      "thickness": 4,
+      "confidence": 0.4352,
+      "wallId": "axis-19",
+      "reviewRequired": true
+    },
+    {
+      "id": "opening-semantic-36",
+      "objectIds": [
+        "semantic-36"
+      ],
+      "category": "door",
+      "axis": "h",
+      "c": 475.5,
+      "from": 344,
+      "to": 351,
+      "thickness": 3,
+      "confidence": 0.4221,
+      "wallId": "axis-13",
+      "reviewRequired": true
+    }
+  ],
+  "unmatchedOpeningIds": [
+    "semantic-29",
+    "semantic-35",
+    "semantic-30",
+    "semantic-37",
+    "semantic-34",
+    "semantic-24",
+    "semantic-23",
+    "semantic-32",
+    "semantic-20",
+    "semantic-19",
+    "semantic-3",
+    "semantic-33",
+    "semantic-14",
+    "semantic-6",
+    "semantic-13"
+  ],
+  "runs": [
+    {
+      "id": "axis-1",
+      "axis": "h",
+      "c": 471.5,
+      "from": 46,
+      "to": 93,
+      "thickness": 13
+    },
+    {
+      "id": "axis-2",
+      "axis": "h",
+      "c": 62.5,
+      "from": 46,
+      "to": 105,
+      "thickness": 13
+    },
+    {
+      "id": "axis-3",
+      "axis": "h",
+      "c": 66.5,
+      "from": 105,
+      "to": 128,
+      "thickness": 1
+    },
+    {
+      "id": "axis-4",
+      "axis": "h",
+      "c": 66,
+      "from": 152,
+      "to": 172,
+      "thickness": 2
+    },
+    {
+      "id": "axis-5",
+      "axis": "h",
+      "c": 62,
+      "from": 172,
+      "to": 229,
+      "thickness": 12
+    },
+    {
+      "id": "axis-6",
+      "axis": "h",
+      "c": 240,
+      "from": 90,
+      "to": 232,
+      "thickness": 5
+    },
+    {
+      "id": "axis-7",
+      "axis": "h",
+      "c": 473.5,
+      "from": 192,
+      "to": 249,
+      "thickness": 9
+    },
+    {
+      "id": "axis-8",
+      "axis": "h",
+      "c": 470.5,
+      "from": 249,
+      "to": 271,
+      "thickness": 11
+    },
+    {
+      "id": "axis-9",
+      "axis": "h",
+      "c": 126,
+      "from": 250,
+      "to": 271,
+      "thickness": 10
+    },
+    {
+      "id": "axis-10",
+      "axis": "h",
+      "c": 238,
+      "from": 240,
+      "to": 278,
+      "thickness": 8
+    },
+    {
+      "id": "axis-11",
+      "axis": "h",
+      "c": 64,
+      "from": 254,
+      "to": 279,
+      "thickness": 12
+    },
+    {
+      "id": "axis-12",
+      "axis": "h",
+      "c": 467,
+      "from": 271,
+      "to": 350,
+      "thickness": 6
+    },
+    {
+      "id": "axis-13",
+      "axis": "h",
+      "c": 475.5,
+      "from": 277,
+      "to": 350,
+      "thickness": 3
+    },
+    {
+      "id": "axis-14",
+      "axis": "h",
+      "c": 240,
+      "from": 318,
+      "to": 351,
+      "thickness": 8
+    },
+    {
+      "id": "axis-15",
+      "axis": "h",
+      "c": 61.5,
+      "from": 312,
+      "to": 359,
+      "thickness": 11
+    },
+    {
+      "id": "axis-16",
+      "axis": "h",
+      "c": 471,
+      "from": 367,
+      "to": 474,
+      "thickness": 12
+    },
+    {
+      "id": "axis-17",
+      "axis": "h",
+      "c": 63,
+      "from": 367,
+      "to": 488,
+      "thickness": 10
+    },
+    {
+      "id": "axis-18",
+      "axis": "h",
+      "c": 293,
+      "from": 368,
+      "to": 497,
+      "thickness": 6
+    },
+    {
+      "id": "axis-19",
+      "axis": "h",
+      "c": 476.5,
+      "from": 474,
+      "to": 511,
+      "thickness": 4
+    },
+    {
+      "id": "axis-20",
+      "axis": "h",
+      "c": 239,
+      "from": 369,
+      "to": 527,
+      "thickness": 3
+    },
+    {
+      "id": "axis-21",
+      "axis": "h",
+      "c": 467,
+      "from": 474,
+      "to": 535,
+      "thickness": 3
+    },
+    {
+      "id": "axis-22",
+      "axis": "h",
+      "c": 293.5,
+      "from": 536,
+      "to": 576,
+      "thickness": 5
+    },
+    {
+      "id": "axis-23",
+      "axis": "h",
+      "c": 471,
+      "from": 535,
+      "to": 578,
+      "thickness": 12
+    },
+    {
+      "id": "axis-24",
+      "axis": "h",
+      "c": 62,
+      "from": 563,
+      "to": 602,
+      "thickness": 12
+    },
+    {
+      "id": "axis-25",
+      "axis": "h",
+      "c": 471.5,
+      "from": 583,
+      "to": 606,
+      "thickness": 11
+    },
+    {
+      "id": "axis-26",
+      "axis": "h",
+      "c": 239.5,
+      "from": 564,
+      "to": 619,
+      "thickness": 5
+    },
+    {
+      "id": "axis-27",
+      "axis": "h",
+      "c": 67.5,
+      "from": 619,
+      "to": 642,
+      "thickness": 1
+    },
+    {
+      "id": "axis-28",
+      "axis": "h",
+      "c": 471,
+      "from": 622,
+      "to": 676,
+      "thickness": 12
+    },
+    {
+      "id": "axis-29",
+      "axis": "h",
+      "c": 295,
+      "from": 630,
+      "to": 678,
+      "thickness": 6
+    },
+    {
+      "id": "axis-30",
+      "axis": "h",
+      "c": 62.5,
+      "from": 653,
+      "to": 708,
+      "thickness": 13
+    },
+    {
+      "id": "axis-31",
+      "axis": "h",
+      "c": 239.5,
+      "from": 655,
+      "to": 711,
+      "thickness": 7
+    },
+    {
+      "id": "axis-32",
+      "axis": "h",
+      "c": 469.5,
+      "from": 684,
+      "to": 721,
+      "thickness": 9
+    },
+    {
+      "id": "axis-33",
+      "axis": "h",
+      "c": 646.5,
+      "from": 688,
+      "to": 751,
+      "thickness": 5
+    },
+    {
+      "id": "axis-34",
+      "axis": "h",
+      "c": 239,
+      "from": 715,
+      "to": 758,
+      "thickness": 6
+    },
+    {
+      "id": "axis-35",
+      "axis": "h",
+      "c": 62,
+      "from": 715,
+      "to": 761,
+      "thickness": 13
+    },
+    {
+      "id": "axis-36",
+      "axis": "h",
+      "c": 328.5,
+      "from": 793,
+      "to": 834,
+      "thickness": 9
+    },
+    {
+      "id": "axis-37",
+      "axis": "h",
+      "c": 717.5,
+      "from": 791,
+      "to": 848,
+      "thickness": 15
+    },
+    {
+      "id": "axis-38",
+      "axis": "h",
+      "c": 328.5,
+      "from": 834,
+      "to": 908,
+      "thickness": 5
+    },
+    {
+      "id": "axis-39",
+      "axis": "h",
+      "c": 714.5,
+      "from": 864,
+      "to": 927,
+      "thickness": 1
+    },
+    {
+      "id": "axis-40",
+      "axis": "h",
+      "c": 724.5,
+      "from": 880,
+      "to": 940,
+      "thickness": 1
+    },
+    {
+      "id": "axis-41",
+      "axis": "h",
+      "c": 62,
+      "from": 829,
+      "to": 954,
+      "thickness": 12
+    },
+    {
+      "id": "axis-42",
+      "axis": "h",
+      "c": 238.5,
+      "from": 797,
+      "to": 956,
+      "thickness": 5
+    },
+    {
+      "id": "axis-43",
+      "axis": "h",
+      "c": 61.5,
+      "from": 961,
+      "to": 1000,
+      "thickness": 13
+    },
+    {
+      "id": "axis-44",
+      "axis": "h",
+      "c": 718,
+      "from": 930,
+      "to": 1044,
+      "thickness": 7
+    },
+    {
+      "id": "axis-45",
+      "axis": "h",
+      "c": 715,
+      "from": 1071,
+      "to": 1104,
+      "thickness": 2
+    },
+    {
+      "id": "axis-46",
+      "axis": "h",
+      "c": 724,
+      "from": 1067,
+      "to": 1123,
+      "thickness": 2
+    },
+    {
+      "id": "axis-47",
+      "axis": "h",
+      "c": 62,
+      "from": 1087,
+      "to": 1183,
+      "thickness": 11
+    },
+    {
+      "id": "axis-48",
+      "axis": "h",
+      "c": 328.5,
+      "from": 961,
+      "to": 1184,
+      "thickness": 7
+    },
+    {
+      "id": "axis-49",
+      "axis": "h",
+      "c": 715.5,
+      "from": 1127,
+      "to": 1184,
+      "thickness": 13
+    },
+    {
+      "id": "axis-50",
+      "axis": "v",
+      "c": 259,
+      "from": 80,
+      "to": 105,
+      "thickness": 24
+    },
+    {
+      "id": "axis-51",
+      "axis": "v",
+      "c": 236.5,
+      "from": 74,
+      "to": 111,
+      "thickness": 9
+    },
+    {
+      "id": "axis-52",
+      "axis": "v",
+      "c": 363.5,
+      "from": 70,
+      "to": 196,
+      "thickness": 7
+    },
+    {
+      "id": "axis-53",
+      "axis": "v",
+      "c": 1189,
+      "from": 67,
+      "to": 197,
+      "thickness": 12
+    },
+    {
+      "id": "axis-54",
+      "axis": "v",
+      "c": 237.5,
+      "from": 172,
+      "to": 208,
+      "thickness": 9
+    },
+    {
+      "id": "axis-55",
+      "axis": "v",
+      "c": 1194,
+      "from": 199,
+      "to": 219,
+      "thickness": 3
+    },
+    {
+      "id": "axis-56",
+      "axis": "v",
+      "c": 608,
+      "from": 70,
+      "to": 231,
+      "thickness": 7
+    },
+    {
+      "id": "axis-57",
+      "axis": "v",
+      "c": 40,
+      "from": 70,
+      "to": 235,
+      "thickness": 12
+    },
+    {
+      "id": "axis-58",
+      "axis": "v",
+      "c": 958,
+      "from": 69,
+      "to": 236,
+      "thickness": 6
+    },
+    {
+      "id": "axis-59",
+      "axis": "v",
+      "c": 712.5,
+      "from": 71,
+      "to": 236,
+      "thickness": 7
+    },
+    {
+      "id": "axis-60",
+      "axis": "v",
+      "c": 362,
+      "from": 196,
+      "to": 237,
+      "thickness": 6
+    },
+    {
+      "id": "axis-61",
+      "axis": "v",
+      "c": 1189.5,
+      "from": 219,
+      "to": 240,
+      "thickness": 11
+    },
+    {
+      "id": "axis-62",
+      "axis": "v",
+      "c": 39.5,
+      "from": 242,
+      "to": 280,
+      "thickness": 12
+    },
+    {
+      "id": "axis-63",
+      "axis": "v",
+      "c": 1189.5,
+      "from": 285,
+      "to": 324,
+      "thickness": 11
+    },
+    {
+      "id": "axis-64",
+      "axis": "v",
+      "c": 788,
+      "from": 290,
+      "to": 324,
+      "thickness": 8
+    },
+    {
+      "id": "axis-65",
+      "axis": "v",
+      "c": 958.5,
+      "from": 287,
+      "to": 325,
+      "thickness": 5
+    },
+    {
+      "id": "axis-66",
+      "axis": "v",
+      "c": 911,
+      "from": 290,
+      "to": 325,
+      "thickness": 6
+    },
+    {
+      "id": "axis-67",
+      "axis": "v",
+      "c": 1190,
+      "from": 332,
+      "to": 380,
+      "thickness": 12
+    },
+    {
+      "id": "axis-68",
+      "axis": "v",
+      "c": 786.5,
+      "from": 389,
+      "to": 408,
+      "thickness": 1
+    },
+    {
+      "id": "axis-69",
+      "axis": "v",
+      "c": 789,
+      "from": 420,
+      "to": 461,
+      "thickness": 6
+    },
+    {
+      "id": "axis-70",
+      "axis": "v",
+      "c": 362.5,
+      "from": 296,
+      "to": 464,
+      "thickness": 6
+    },
+    {
+      "id": "axis-71",
+      "axis": "v",
+      "c": 681,
+      "from": 296,
+      "to": 464,
+      "thickness": 6
+    },
+    {
+      "id": "axis-72",
+      "axis": "v",
+      "c": 40,
+      "from": 365,
+      "to": 464,
+      "thickness": 12
+    },
+    {
+      "id": "axis-73",
+      "axis": "v",
+      "c": 581.5,
+      "from": 304,
+      "to": 466,
+      "thickness": 7
+    },
+    {
+      "id": "axis-74",
+      "axis": "v",
+      "c": 784.5,
+      "from": 478,
+      "to": 522,
+      "thickness": 13
+    },
+    {
+      "id": "axis-75",
+      "axis": "v",
+      "c": 1190,
+      "from": 468,
+      "to": 558,
+      "thickness": 12
+    },
+    {
+      "id": "axis-76",
+      "axis": "v",
+      "c": 791.5,
+      "from": 547,
+      "to": 566,
+      "thickness": 1
+    },
+    {
+      "id": "axis-77",
+      "axis": "v",
+      "c": 785,
+      "from": 600,
+      "to": 709,
+      "thickness": 12
+    },
+    {
+      "id": "axis-78",
+      "axis": "v",
+      "c": 1189.5,
+      "from": 645,
+      "to": 709,
+      "thickness": 11
+    }
+  ]
+}

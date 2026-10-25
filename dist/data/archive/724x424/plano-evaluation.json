@@ -1,0 +1,334 @@
+{
+  "scope": "single-image-initial-manual-reference",
+  "confidence": 0.35,
+  "bboxIouThreshold": 0.5,
+  "rows": [
+    {
+      "category": "door",
+      "tp": 10,
+      "fp": 3,
+      "fn": 2,
+      "predicted": 13,
+      "expected": 12,
+      "precision": 0.7692307692307693,
+      "recall": 0.8333333333333334,
+      "matches": [
+        {
+          "predictionId": "semantic-22",
+          "referenceId": "ref-door-1",
+          "iou": 0.6344827586206897
+        },
+        {
+          "predictionId": "semantic-23",
+          "referenceId": "ref-door-2",
+          "iou": 0.8518518518518519
+        },
+        {
+          "predictionId": "semantic-24",
+          "referenceId": "ref-door-4",
+          "iou": 0.5605095541401274
+        },
+        {
+          "predictionId": "semantic-25",
+          "referenceId": "ref-door-5",
+          "iou": 0.676923076923077
+        },
+        {
+          "predictionId": "semantic-26",
+          "referenceId": "ref-door-6",
+          "iou": 0.704
+        },
+        {
+          "predictionId": "semantic-27",
+          "referenceId": "ref-door-3",
+          "iou": 0.7692307692307693
+        },
+        {
+          "predictionId": "semantic-29",
+          "referenceId": "ref-door-8",
+          "iou": 0.8076923076923077
+        },
+        {
+          "predictionId": "semantic-30",
+          "referenceId": "ref-door-7",
+          "iou": 0.5714285714285714
+        },
+        {
+          "predictionId": "semantic-33",
+          "referenceId": "ref-door-9",
+          "iou": 0.7058823529411765
+        },
+        {
+          "predictionId": "semantic-34",
+          "referenceId": "ref-door-11",
+          "iou": 0.5052631578947369
+        }
+      ],
+      "falsePositiveIds": [
+        "semantic-28",
+        "semantic-31",
+        "semantic-32"
+      ],
+      "falseNegativeIds": [
+        "ref-door-10",
+        "ref-door-12"
+      ]
+    },
+    {
+      "category": "window",
+      "tp": 12,
+      "fp": 9,
+      "fn": 4,
+      "predicted": 21,
+      "expected": 16,
+      "precision": 0.5714285714285714,
+      "recall": 0.75,
+      "matches": [
+        {
+          "predictionId": "semantic-2",
+          "referenceId": "ref-window-3",
+          "iou": 0.7616926503340757
+        },
+        {
+          "predictionId": "semantic-3",
+          "referenceId": "ref-window-4",
+          "iou": 0.6260869565217392
+        },
+        {
+          "predictionId": "semantic-4",
+          "referenceId": "ref-window-5",
+          "iou": 0.624765478424015
+        },
+        {
+          "predictionId": "semantic-5",
+          "referenceId": "ref-window-6",
+          "iou": 0.8304498269896193
+        },
+        {
+          "predictionId": "semantic-10",
+          "referenceId": "ref-window-7",
+          "iou": 0.7054409005628518
+        },
+        {
+          "predictionId": "semantic-13",
+          "referenceId": "ref-window-8",
+          "iou": 0.7237762237762237
+        },
+        {
+          "predictionId": "semantic-14",
+          "referenceId": "ref-window-9",
+          "iou": 0.6103896103896104
+        },
+        {
+          "predictionId": "semantic-15",
+          "referenceId": "ref-window-10",
+          "iou": 0.5217391304347826
+        },
+        {
+          "predictionId": "semantic-16",
+          "referenceId": "ref-window-11",
+          "iou": 0.7272727272727273
+        },
+        {
+          "predictionId": "semantic-18",
+          "referenceId": "ref-window-14",
+          "iou": 0.6388888888888888
+        },
+        {
+          "predictionId": "semantic-20",
+          "referenceId": "ref-window-15",
+          "iou": 0.8047445255474452
+        },
+        {
+          "predictionId": "semantic-21",
+          "referenceId": "ref-window-16",
+          "iou": 0.6120218579234973
+        }
+      ],
+      "falsePositiveIds": [
+        "semantic-1",
+        "semantic-6",
+        "semantic-7",
+        "semantic-8",
+        "semantic-9",
+        "semantic-11",
+        "semantic-12",
+        "semantic-17",
+        "semantic-19"
+      ],
+      "falseNegativeIds": [
+        "ref-window-1",
+        "ref-window-2",
+        "ref-window-12",
+        "ref-window-13"
+      ]
+    },
+    {
+      "category": "bed",
+      "tp": 4,
+      "fp": 0,
+      "fn": 3,
+      "predicted": 4,
+      "expected": 7,
+      "precision": 1,
+      "recall": 0.5714285714285714,
+      "matches": [
+        {
+          "predictionId": "prediction-16",
+          "referenceId": "ref-bed-3",
+          "iou": 0.8133194807382153
+        },
+        {
+          "predictionId": "prediction-19",
+          "referenceId": "ref-bed-6",
+          "iou": 0.905444959609375
+        },
+        {
+          "predictionId": "prediction-33",
+          "referenceId": "ref-bed-2",
+          "iou": 0.5115148010578656
+        },
+        {
+          "predictionId": "prediction-34",
+          "referenceId": "ref-bed-1",
+          "iou": 0.6215886415608259
+        }
+      ],
+      "falsePositiveIds": [],
+      "falseNegativeIds": [
+        "ref-bed-4",
+        "ref-bed-5",
+        "ref-bed-7"
+      ]
+    },
+    {
+      "category": "sofa",
+      "tp": 3,
+      "fp": 5,
+      "fn": 1,
+      "predicted": 8,
+      "expected": 4,
+      "precision": 0.375,
+      "recall": 0.75,
+      "matches": [
+        {
+          "predictionId": "prediction-1",
+          "referenceId": "ref-sofa-3",
+          "iou": 0.7662700000000017
+        },
+        {
+          "predictionId": "prediction-15",
+          "referenceId": "ref-sofa-4",
+          "iou": 0.788160497835497
+        },
+        {
+          "predictionId": "prediction-18",
+          "referenceId": "ref-sofa-2",
+          "iou": 0.8731687499999999
+        }
+      ],
+      "falsePositiveIds": [
+        "prediction-5",
+        "prediction-14",
+        "prediction-20",
+        "prediction-25",
+        "prediction-30"
+      ],
+      "falseNegativeIds": [
+        "ref-sofa-1"
+      ]
+    },
+    {
+      "category": "table",
+      "tp": 2,
+      "fp": 4,
+      "fn": 2,
+      "predicted": 6,
+      "expected": 4,
+      "precision": 0.3333333333333333,
+      "recall": 0.5,
+      "matches": [
+        {
+          "predictionId": "prediction-7",
+          "referenceId": "ref-table-2",
+          "iou": 0.9263216477695044
+        },
+        {
+          "predictionId": "prediction-31",
+          "referenceId": "ref-table-4",
+          "iou": 0.6670333313788301
+        }
+      ],
+      "falsePositiveIds": [
+        "prediction-28",
+        "prediction-29",
+        "prediction-36",
+        "prediction-39"
+      ],
+      "falseNegativeIds": [
+        "ref-table-1",
+        "ref-table-3"
+      ]
+    }
+  ],
+  "wallIou": 0.5733153778422334,
+  "wallIntersectionPixels": 11069,
+  "wallUnionPixels": 19307,
+  "totals": {
+    "tp": 31,
+    "fp": 21,
+    "fn": 12,
+    "precision": 0.5961538461538461,
+    "recall": 0.7209302325581395
+  },
+  "note": "Una imagen con referencia manual inicial; no estima precisión sobre otros planos.",
+  "baselineWallIou": 0.7051745565472828,
+  "imageSha256": "1eaaa77811f87c7a623468c69f533e6f1221fea1f1112e60d2ca82315ed78f90",
+  "referenceStatus": "initial-review",
+  "modelProvenance": {
+    "kind": "neural-inference",
+    "device": "cpu",
+    "structureModel": "https://github.com/CubiCasa/CubiCasa5k",
+    "objectModel": "https://github.com/REIkd/FYP-Floorplan",
+    "structureWeightsSha256": "dd20b4e1bf1d670f2125107b079df06958b1ccd36e49a464ab739aeb00b8e7a2",
+    "objectWeightsSha256": "8f0551c63accaf77a7c6edddc713db8a0666157f84b463bef1af06e42ee870a2",
+    "referenceUsedForInference": false,
+    "structureClasses": [
+      "wall",
+      "door",
+      "window",
+      "wardrobe",
+      "toilet",
+      "sink",
+      "bathtub",
+      "appliance"
+    ],
+    "structureArchitecture": "CubiCasa5K hourglass",
+    "objectClasses": {
+      "0": "door",
+      "1": "window",
+      "2": "table",
+      "3": "chair",
+      "4": "bed",
+      "5": "sofa",
+      "6": "toilet",
+      "7": "sink",
+      "8": "bathtub",
+      "9": "stove",
+      "10": "refrigerator",
+      "11": "wardrobe",
+      "12": "tv",
+      "13": "desk",
+      "14": "washingmachine",
+      "15": "loadbearing_wall",
+      "16": "aircondition",
+      "17": "cupboard"
+    },
+    "fusion": "CubiCasa openings and fixtures; YOLO furniture with overlapping fixture proposals suppressed at bbox IoU > 0.35.",
+    "notes": [
+      "Modelos externos sin ajuste con este plano.",
+      "Las puntuaciones del detector no están calibradas como probabilidades.",
+      "Alturas y orientación de muebles son aproximaciones de catálogo."
+    ]
+  }
+}

@@ -1,0 +1,557 @@
+[
+  {
+    "id": "semantic-3",
+    "category": "window",
+    "bbox": [
+      107,
+      57,
+      144,
+      67
+    ],
+    "confidence": 0.7189,
+    "source": "cubicasa-segmentation",
+    "reviewRequired": true,
+    "nearest": [
+      {
+        "id": "ref-window-1",
+        "bbox": [
+          76.45,
+          51.6,
+          170.147,
+          71.033
+        ],
+        "iou": 0.20320584114465423,
+        "dist": 2.305162575611544
+      },
+      {
+        "id": "ref-window-2",
+        "bbox": [
+          239.094,
+          51.6,
+          309.809,
+          71.033
+        ],
+        "iou": 0,
+        "dist": 148.95306819431414
+      }
+    ]
+  },
+  {
+    "id": "semantic-6",
+    "category": "window",
+    "bbox": [
+      620,
+      57,
+      653,
+      68
+    ],
+    "confidence": 0.6719,
+    "source": "cubicasa-segmentation",
+    "reviewRequired": true,
+    "nearest": [
+      {
+        "id": "ref-window-4",
+        "bbox": [
+          622.721,
+          51.6,
+          654.542,
+          71.033
+        ],
+        "iou": 0.5137507893175166,
+        "dist": 2.4380247127541748
+      },
+      {
+        "id": "ref-window-3",
+        "bbox": [
+          495.435,
+          51.6,
+          566.149,
+          71.033
+        ],
+        "iou": 0,
+        "dist": 105.71462498751063
+      }
+    ]
+  },
+  {
+    "id": "semantic-13",
+    "category": "window",
+    "bbox": [
+      272,
+      468,
+      335,
+      477
+    ],
+    "confidence": 0.5414,
+    "source": "cubicasa-segmentation",
+    "reviewRequired": true,
+    "nearest": [
+      {
+        "id": "ref-window-9",
+        "bbox": [
+          267.38,
+          457.926,
+          354.005,
+          477.359
+        ],
+        "iou": 0.33682162020555484,
+        "dist": 8.679133741336175
+      },
+      {
+        "id": "ref-window-8",
+        "bbox": [
+          94.129,
+          457.926,
+          175.451,
+          477.359
+        ],
+        "iou": 0,
+        "dist": 168.77991410784043
+      }
+    ]
+  },
+  {
+    "id": "semantic-14",
+    "category": "window",
+    "bbox": [
+      475,
+      469,
+      535,
+      477
+    ],
+    "confidence": 0.6754,
+    "source": "cubicasa-segmentation",
+    "reviewRequired": true,
+    "nearest": [
+      {
+        "id": "ref-window-10",
+        "bbox": [
+          470.684,
+          457.926,
+          532.56,
+          477.359
+        ],
+        "iou": 0.37683835091753554,
+        "dist": 6.333536946288421
+      },
+      {
+        "id": "ref-window-11",
+        "bbox": [
+          589.131,
+          457.926,
+          622.721,
+          477.359
+        ],
+        "iou": 0,
+        "dist": 101.06809725254551
+      }
+    ]
+  },
+  {
+    "id": "semantic-19",
+    "category": "window",
+    "bbox": [
+      848,
+      712,
+      930,
+      727
+    ],
+    "confidence": 0.7199,
+    "source": "cubicasa-segmentation",
+    "reviewRequired": true,
+    "nearest": [
+      {
+        "id": "ref-window-15",
+        "bbox": [
+          847.24,
+          703.488,
+          933.865,
+          722.921
+        ],
+        "iou": 0.4437975274939906,
+        "dist": 6.484101826775962
+      },
+      {
+        "id": "ref-window-16",
+        "bbox": [
+          1047.008,
+          703.488,
+          1131.866,
+          722.921
+        ],
+        "iou": 0,
+        "dist": 200.5358429040804
+      }
+    ]
+  },
+  {
+    "id": "semantic-20",
+    "category": "window",
+    "bbox": [
+      1045,
+      712,
+      1127,
+      724
+    ],
+    "confidence": 0.7301,
+    "source": "cubicasa-segmentation",
+    "reviewRequired": true,
+    "nearest": [
+      {
+        "id": "ref-window-16",
+        "bbox": [
+          1047.008,
+          703.488,
+          1131.866,
+          722.921
+        ],
+        "iou": 0.49651379752038505,
+        "dist": 5.89998213980344
+      },
+      {
+        "id": "ref-window-14",
+        "bbox": [
+          1179.598,
+          556.857,
+          1200.813,
+          638.123
+        ],
+        "iou": 0,
+        "dist": 159.31555583259913
+      }
+    ]
+  },
+  {
+    "id": "semantic-23",
+    "category": "door",
+    "bbox": [
+      233,
+      135,
+      240,
+      172
+    ],
+    "confidence": 0.7878,
+    "source": "cubicasa-segmentation",
+    "reviewRequired": true,
+    "nearest": [
+      {
+        "id": "ref-door-2",
+        "bbox": [
+          274.451,
+          235.33,
+          322.184,
+          244.163
+        ],
+        "iou": 0,
+        "dist": 106.11249723053363
+      },
+      {
+        "id": "ref-door-3",
+        "bbox": [
+          359.309,
+          242.396,
+          368.148,
+          288.329
+        ],
+        "iou": 0,
+        "dist": 169.4116587443143
+      }
+    ]
+  },
+  {
+    "id": "semantic-24",
+    "category": "door",
+    "bbox": [
+      52,
+      236,
+      91,
+      244
+    ],
+    "confidence": 0.804,
+    "source": "cubicasa-segmentation",
+    "reviewRequired": true,
+    "nearest": [
+      {
+        "id": "ref-door-1",
+        "bbox": [
+          44.629,
+          235.33,
+          95.897,
+          244.163
+        ],
+        "iou": 0.6889694863452476,
+        "dist": 1.2627079036736877
+      },
+      {
+        "id": "ref-door-2",
+        "bbox": [
+          274.451,
+          235.33,
+          322.184,
+          244.163
+        ],
+        "iou": 0,
+        "dist": 226.81764166065216
+      }
+    ]
+  },
+  {
+    "id": "semantic-29",
+    "category": "door",
+    "bbox": [
+      359,
+      249,
+      368,
+      288
+    ],
+    "confidence": 0.8835,
+    "source": "cubicasa-segmentation",
+    "reviewRequired": true,
+    "nearest": [
+      {
+        "id": "ref-door-3",
+        "bbox": [
+          359.309,
+          242.396,
+          368.148,
+          288.329
+        ],
+        "iou": 0.8107803859707268,
+        "dist": 3.1458096732002274
+      },
+      {
+        "id": "ref-door-2",
+        "bbox": [
+          274.451,
+          235.33,
+          322.184,
+          244.163
+        ],
+        "iou": 0,
+        "dist": 71.24269835218199
+      }
+    ]
+  },
+  {
+    "id": "semantic-30",
+    "category": "door",
+    "bbox": [
+      956,
+      249,
+      963,
+      287
+    ],
+    "confidence": 0.8204,
+    "source": "cubicasa-segmentation",
+    "reviewRequired": true,
+    "nearest": [
+      {
+        "id": "ref-door-12",
+        "bbox": [
+          955.079,
+          242.396,
+          963.919,
+          290.095
+        ],
+        "iou": 0.6308412699963611,
+        "dist": 1.7545002849814604
+      },
+      {
+        "id": "ref-door-6",
+        "bbox": [
+          755.311,
+          233.563,
+          799.507,
+          242.396
+        ],
+        "iou": 0,
+        "dist": 184.54907938337158
+      }
+    ]
+  },
+  {
+    "id": "semantic-32",
+    "category": "door",
+    "bbox": [
+      592,
+      292,
+      632,
+      300
+    ],
+    "confidence": 0.7824,
+    "source": "cubicasa-segmentation",
+    "reviewRequired": true,
+    "nearest": [
+      {
+        "id": "ref-door-8",
+        "bbox": [
+          589.131,
+          288.329,
+          635.096,
+          297.162
+        ],
+        "iou": 0.3974370277746545,
+        "dist": 3.2564785428434875
+      },
+      {
+        "id": "ref-door-5",
+        "bbox": [
+          613.881,
+          233.563,
+          659.846,
+          242.396
+        ],
+        "iou": 0,
+        "dist": 63.12346673385422
+      }
+    ]
+  },
+  {
+    "id": "semantic-33",
+    "category": "door",
+    "bbox": [
+      919,
+      327,
+      952,
+      333
+    ],
+    "confidence": 0.6836,
+    "source": "cubicasa-segmentation",
+    "reviewRequired": true,
+    "nearest": [
+      {
+        "id": "ref-door-12",
+        "bbox": [
+          955.079,
+          242.396,
+          963.919,
+          290.095
+        ],
+        "iou": 0,
+        "dist": 68.12186338650756
+      },
+      {
+        "id": "ref-door-10",
+        "bbox": [
+          785.364,
+          336.028,
+          794.204,
+          422.593
+        ],
+        "iou": 0,
+        "dist": 153.83328009975605
+      }
+    ]
+  },
+  {
+    "id": "semantic-34",
+    "category": "door",
+    "bbox": [
+      786,
+      343,
+      794,
+      420
+    ],
+    "confidence": 0.8109,
+    "source": "cubicasa-segmentation",
+    "reviewRequired": true,
+    "nearest": [
+      {
+        "id": "ref-door-10",
+        "bbox": [
+          785.364,
+          336.028,
+          794.204,
+          422.593
+        ],
+        "iou": 0.8049818970548452,
+        "dist": 2.2001286894179444
+      },
+      {
+        "id": "ref-door-9",
+        "bbox": [
+          719.953,
+          461.459,
+          780.061,
+          473.825
+        ],
+        "iou": 0,
+        "dist": 94.97307098857023
+      }
+    ]
+  },
+  {
+    "id": "semantic-35",
+    "category": "door",
+    "bbox": [
+      722,
+      466,
+      771,
+      478
+    ],
+    "confidence": 0.823,
+    "source": "cubicasa-segmentation",
+    "reviewRequired": true,
+    "nearest": [
+      {
+        "id": "ref-door-9",
+        "bbox": [
+          719.953,
+          461.459,
+          780.061,
+          473.825
+        ],
+        "iou": 0.4045119968114456,
+        "dist": 5.593854931976702
+      },
+      {
+        "id": "ref-door-11",
+        "bbox": [
+          780.061,
+          516.225,
+          792.436,
+          595.723
+        ],
+        "iou": 0,
+        "dist": 92.90627496703331
+      }
+    ]
+  },
+  {
+    "id": "semantic-37",
+    "category": "door",
+    "bbox": [
+      779,
+      523,
+      791,
+      600
+    ],
+    "confidence": 0.813,
+    "source": "cubicasa-segmentation",
+    "reviewRequired": true,
+    "nearest": [
+      {
+        "id": "ref-door-11",
+        "bbox": [
+          780.061,
+          516.225,
+          792.436,
+          595.723
+        ],
+        "iou": 0.7152186851380122,
+        "dist": 5.665282715805118
+      },
+      {
+        "id": "ref-door-9",
+        "bbox": [
+          719.953,
+          461.459,
+          780.061,
+          473.825
+        ],
+        "iou": 0,
+        "dist": 100.16902821231717
+      }
+    ]
+  }
+]

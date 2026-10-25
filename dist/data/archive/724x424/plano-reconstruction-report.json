@@ -1,0 +1,49 @@
+{
+  "scope": "single-image-initial-manual-reference",
+  "imageSha256": "1eaaa77811f87c7a623468c69f533e6f1221fea1f1112e60d2ca82315ed78f90",
+  "confidence": 0.35,
+  "stats": {
+    "originalRegions": 35,
+    "cleanedRegions": 35,
+    "originalVertices": 1688,
+    "cleanedVertices": 1301,
+    "footprintIou": 0.9410688884373095,
+    "associatedOpenings": 27,
+    "unmatchedOpenings": 7,
+    "conservativeFallback": false
+  },
+  "originalWallIou": 0.5733153778422334,
+  "reconstructedFootprintIou": 0.5841152988750065,
+  "detectionMetricsUnchanged": {
+    "tp": 31,
+    "fp": 21,
+    "fn": 12,
+    "precision": 0.5961538461538461,
+    "recall": 0.7209302325581395
+  },
+  "openingsByCategory": {
+    "door": 8,
+    "window": 19
+  },
+  "unmatchedOpeningIds": [
+    "semantic-25",
+    "semantic-22",
+    "semantic-28",
+    "semantic-34",
+    "semantic-32",
+    "semantic-12",
+    "semantic-19"
+  ],
+  "furniture": {
+    "shown": 58,
+    "orientationFromWall": 24,
+    "rejected": []
+  },
+  "limitations": [
+    "Only the 2D footprint is evaluated here, before restoring lintels and sills.",
+    "Wall association does not validate an opening category.",
+    "No model retraining or reference-guided geometry correction.",
+    "Catalogue heights and heuristic furniture orientation require review.",
+    "This report uses provisional scale; user measurements are stored per image in the browser."
+  ]
+}

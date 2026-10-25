@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "imageSha256": "9f3f598dd2db7f26fa7374c0b5bbbf7764e70bda9febb9aca65243fe3389f049",
+  "reviewer": "agent-visual-review",
+  "independentReview": false,
+  "date": "2026-10-25",
+  "scope": "Inspección visual de las 15 propuestas originalmente sin asociación. No es una validación independiente ni un ajuste del modelo.",
+  "referenceAdditions": [
+    {"id":"ref-door-13","category":"door","bbox":[231,130,242,174],"source":"manual-reference","reviewRequired":true,"note":"Puerta real entre los armarios del vestidor; omitida en la referencia inicial."},
+    {"id":"ref-door-14","category":"door","bbox":[916,323,959,334],"source":"manual-reference","reviewRequired":true,"note":"Puerta real junto al armario y acceso a cocina; omitida en la referencia inicial."}
+  ],
+  "cases": [
+    {"objectId":"semantic-3","category":"window","bbox":[107,57,144,67],"referenceId":"ref-window-1","diagnosis":"fragmentation","geometryReview":true,"note":"Propuesta parcial de la ventana del baño. Se agrupa con semantic-4; la máscara de muro ocupa parte del extremo izquierdo, por lo que el ancho total sigue pendiente."},
+    {"objectId":"semantic-6","category":"window","bbox":[620,57,653,68],"referenceId":"ref-window-4","diagnosis":"corner-support","geometryReview":true,"note":"Ventana real próxima a un encuentro en T. Hay soporte estructural, pero la posición de la jamba izquierda necesita revisar la máscara."},
+    {"objectId":"semantic-13","category":"window","bbox":[272,468,335,477],"referenceId":"ref-window-9","diagnosis":"fragmentation","geometryReview":true,"note":"Ventana real con un fragmento adicional semantic-15. La unión evita un segundo marco; el extremo derecho y el eje de muro requieren comprobación."},
+    {"objectId":"semantic-14","category":"window","bbox":[475,469,535,477],"referenceId":"ref-window-10","diagnosis":"axis-and-spurious-run","geometryReview":true,"note":"Ventana real. El método anterior elegía una línea fina del marco; se usan las jambas del muro. La máscara queda desplazada respecto al trazo original."},
+    {"objectId":"semantic-19","category":"window","bbox":[848,712,930,727],"referenceId":"ref-window-15","diagnosis":"axis-and-spurious-run","geometryReview":true,"note":"Ventana real del salón. Se corrige la selección de apoyos; persiste un desplazamiento del contorno exterior del muro respecto a la imagen."},
+    {"objectId":"semantic-20","category":"window","bbox":[1045,712,1127,724],"referenceId":"ref-window-16","diagnosis":"fragmentation-and-axis","geometryReview":true,"note":"Ventana real del salón con fragmento semantic-21. Se evita duplicar el marco; la máscara exterior conserva un desplazamiento que necesita revisión."},
+    {"objectId":"semantic-23","category":"door","bbox":[233,135,240,172],"referenceId":"ref-door-13","diagnosis":"missing-reference-and-short-support","geometryReview":false,"note":"Puerta real del vestidor. Faltaba en la referencia y sus apoyos cortos no se resolvían en la asociación anterior."},
+    {"objectId":"semantic-24","category":"door","bbox":[52,236,91,244],"referenceId":"ref-door-1","diagnosis":"corner-support","geometryReview":false,"note":"Puerta real del baño. Una jamba coincide con el muro perpendicular exterior; no hay dos tramos collineales."},
+    {"objectId":"semantic-29","category":"door","bbox":[359,249,368,288],"referenceId":"ref-door-3","diagnosis":"corner-and-endpoint-offset","geometryReview":false,"note":"Puerta real al pasillo. Los extremos detectados no alcanzaban los encuentros de muro; se utilizan caras interiores de las jambas."},
+    {"objectId":"semantic-30","category":"door","bbox":[956,249,963,287],"referenceId":"ref-door-12","diagnosis":"corner-support","geometryReview":false,"note":"Puerta real junto a cocina. El apoyo superior es un encuentro perpendicular."},
+    {"objectId":"semantic-32","category":"door","bbox":[592,292,632,300],"referenceId":"ref-door-8","diagnosis":"short-corner-support","geometryReview":false,"note":"Puerta real del baño pequeño. El encuentro con el tabique izquierdo requiere tolerancia de rasterización y apoyo corto."},
+    {"objectId":"semantic-33","category":"door","bbox":[919,327,952,333],"referenceId":"ref-door-14","diagnosis":"missing-reference-and-two-corners","geometryReview":false,"note":"Puerta real junto a cocina, omitida en la referencia. Se apoya en dos jambas perpendiculares."},
+    {"objectId":"semantic-34","category":"door","bbox":[786,343,794,420],"referenceId":"ref-door-10","diagnosis":"corner-and-endpoint-offset","geometryReview":false,"note":"Puerta doble real entre recibidor y salón. Se ajusta el extremo superior al encuentro del muro."},
+    {"objectId":"semantic-35","category":"door","bbox":[722,466,771,478],"referenceId":"ref-door-9","diagnosis":"corner-support","geometryReview":false,"note":"Puerta real al porche. La jamba derecha pertenece al muro perpendicular."},
+    {"objectId":"semantic-37","category":"door","bbox":[779,523,791,600],"referenceId":"ref-door-11","diagnosis":"spurious-run","geometryReview":false,"note":"Puerta doble real al porche. Una línea fina dentro del vano era seleccionada en lugar de los apoyos de muro."}
+  ],
+  "additionalFindings": [
+    {"objectIds":["semantic-22","semantic-36"],"kind":"tiny-conflicting-fragments","note":"Fragmentos etiquetados como puerta sobre ventanas. Se conservan en 2D y se excluyen del modelo 3D; nunca se fusionan como puertas con una ventana."},
+    {"objectIds":["semantic-8","semantic-9"],"kind":"remaining-window-fragmentation","note":"La ventana vertical de cocina sigue dividida en dos cuerpos porque la máscara presenta un tramo sólido entre ellos. Se conserva esa separación hasta revisar la máscara, sin eliminar el posible machón automáticamente."}
+  ]
+}

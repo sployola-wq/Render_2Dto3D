@@ -1,0 +1,5 @@
+# Install torch/torchvision CPU first, as described in setup-local.ps1.
+ultralytics==8.3.221
+numpy==2.5.2
+pillow==12.3.0
+opencv-python==5.0.0.93

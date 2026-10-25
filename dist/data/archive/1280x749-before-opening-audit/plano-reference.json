@@ -1,0 +1,1387 @@
+{
+  "schemaVersion": 2,
+  "imageSha256": "9f3f598dd2db7f26fa7374c0b5bbbf7764e70bda9febb9aca65243fe3389f049",
+  "width": 1280,
+  "height": 749,
+  "provenance": {
+    "kind": "manual-reference",
+    "status": "transferred-initial-review",
+    "description": "Referencia manual inicial trasladada mediante registro entre resoluciones. Pendiente de revisión independiente sobre la nueva imagen.",
+    "usedForTraining": false,
+    "transferredFrom": {
+      "imageSha256": "1eaaa77811f87c7a623468c69f533e6f1221fea1f1112e60d2ca82315ed78f90",
+      "width": 724,
+      "height": 424
+    },
+    "registration": {
+      "method": "SIFT-RANSAC-axis-aligned-affine",
+      "matches": 587,
+      "inliers": 466,
+      "medianErrorPixels": 0.2887,
+      "scaleX": 1.7678651074647898,
+      "scaleY": 1.766634809491166,
+      "translateX": 0.4322826667948045,
+      "translateY": 0.3673351033053618
+    }
+  },
+  "evaluation": {
+    "objectCategories": [
+      "door",
+      "window",
+      "bed",
+      "sofa",
+      "table"
+    ],
+    "bboxIouThreshold": 0.5,
+    "wallMetric": "raster-union-IoU",
+    "boxDefinition": "Puertas y ventanas: huella de la abertura; mobiliario: huella exterior del símbolo. No se incluyen arcos de giro en cajas de puerta.",
+    "scope": "Las categorías evaluadas se anotaron de forma exhaustiva según la lectura visual inicial. Sillas y equipamiento son anotaciones auxiliares no evaluadas."
+  },
+  "walls": [
+    {
+      "id": "ref-wall-1",
+      "axis": "h",
+      "c": 62.2,
+      "from": 34.022,
+      "to": 76.45,
+      "thickness": 12.366
+    },
+    {
+      "id": "ref-wall-2",
+      "axis": "h",
+      "c": 62.2,
+      "from": 170.147,
+      "to": 239.094,
+      "thickness": 12.366
+    },
+    {
+      "id": "ref-wall-3",
+      "axis": "h",
+      "c": 62.2,
+      "from": 309.809,
+      "to": 495.435,
+      "thickness": 12.366
+    },
+    {
+      "id": "ref-wall-4",
+      "axis": "h",
+      "c": 62.2,
+      "from": 566.149,
+      "to": 622.721,
+      "thickness": 12.366
+    },
+    {
+      "id": "ref-wall-5",
+      "axis": "h",
+      "c": 62.2,
+      "from": 654.542,
+      "to": 762.382,
+      "thickness": 12.366
+    },
+    {
+      "id": "ref-wall-6",
+      "axis": "h",
+      "c": 62.2,
+      "from": 827.793,
+      "to": 1001.044,
+      "thickness": 12.366
+    },
+    {
+      "id": "ref-wall-7",
+      "axis": "h",
+      "c": 62.2,
+      "from": 1085.901,
+      "to": 1197.277,
+      "thickness": 12.366
+    },
+    {
+      "id": "ref-wall-8",
+      "axis": "v",
+      "c": 40.209,
+      "from": 58.666,
+      "to": 279.496,
+      "thickness": 12.375
+    },
+    {
+      "id": "ref-wall-9",
+      "axis": "v",
+      "c": 40.209,
+      "from": 362.527,
+      "to": 472.059,
+      "thickness": 12.375
+    },
+    {
+      "id": "ref-wall-10",
+      "axis": "v",
+      "c": 1190.205,
+      "from": 58.666,
+      "to": 198.23,
+      "thickness": 12.375
+    },
+    {
+      "id": "ref-wall-11",
+      "axis": "v",
+      "c": 1190.205,
+      "from": 281.262,
+      "to": 378.427,
+      "thickness": 12.375
+    },
+    {
+      "id": "ref-wall-12",
+      "axis": "v",
+      "c": 1190.205,
+      "from": 461.459,
+      "to": 556.857,
+      "thickness": 12.375
+    },
+    {
+      "id": "ref-wall-13",
+      "axis": "v",
+      "c": 1190.205,
+      "from": 638.123,
+      "to": 717.621,
+      "thickness": 12.375
+    },
+    {
+      "id": "ref-wall-14",
+      "axis": "h",
+      "c": 466.759,
+      "from": 34.022,
+      "to": 94.129,
+      "thickness": 12.366
+    },
+    {
+      "id": "ref-wall-15",
+      "axis": "h",
+      "c": 466.759,
+      "from": 175.451,
+      "to": 267.38,
+      "thickness": 12.366
+    },
+    {
+      "id": "ref-wall-16",
+      "axis": "h",
+      "c": 466.759,
+      "from": 354.005,
+      "to": 470.684,
+      "thickness": 12.366
+    },
+    {
+      "id": "ref-wall-17",
+      "axis": "h",
+      "c": 466.759,
+      "from": 532.56,
+      "to": 589.131,
+      "thickness": 12.366
+    },
+    {
+      "id": "ref-wall-18",
+      "axis": "h",
+      "c": 466.759,
+      "from": 622.721,
+      "to": 719.953,
+      "thickness": 12.366
+    },
+    {
+      "id": "ref-wall-19",
+      "axis": "h",
+      "c": 712.321,
+      "from": 783.597,
+      "to": 847.24,
+      "thickness": 12.366
+    },
+    {
+      "id": "ref-wall-20",
+      "axis": "h",
+      "c": 712.321,
+      "from": 933.865,
+      "to": 1047.008,
+      "thickness": 12.366
+    },
+    {
+      "id": "ref-wall-21",
+      "axis": "h",
+      "c": 712.321,
+      "from": 1131.866,
+      "to": 1197.277,
+      "thickness": 12.366
+    },
+    {
+      "id": "ref-wall-22",
+      "axis": "v",
+      "c": 785.364,
+      "from": 419.06,
+      "to": 516.225,
+      "thickness": 12.375
+    },
+    {
+      "id": "ref-wall-23",
+      "axis": "v",
+      "c": 785.364,
+      "from": 595.723,
+      "to": 717.621,
+      "thickness": 12.375
+    },
+    {
+      "id": "ref-wall-24",
+      "axis": "h",
+      "c": 238.863,
+      "from": 94.129,
+      "to": 274.451,
+      "thickness": 8.833
+    },
+    {
+      "id": "ref-wall-25",
+      "axis": "h",
+      "c": 238.863,
+      "from": 322.184,
+      "to": 366.38,
+      "thickness": 8.833
+    },
+    {
+      "id": "ref-wall-26",
+      "axis": "v",
+      "c": 235.558,
+      "from": 65.733,
+      "to": 129.332,
+      "thickness": 8.839
+    },
+    {
+      "id": "ref-wall-27",
+      "axis": "v",
+      "c": 235.558,
+      "from": 171.731,
+      "to": 240.63,
+      "thickness": 8.839
+    },
+    {
+      "id": "ref-wall-28",
+      "axis": "v",
+      "c": 362.845,
+      "from": 65.733,
+      "to": 242.396,
+      "thickness": 8.839
+    },
+    {
+      "id": "ref-wall-29",
+      "axis": "v",
+      "c": 362.845,
+      "from": 288.329,
+      "to": 466.759,
+      "thickness": 8.839
+    },
+    {
+      "id": "ref-wall-30",
+      "axis": "h",
+      "c": 237.096,
+      "from": 362.845,
+      "to": 521.952,
+      "thickness": 8.833
+    },
+    {
+      "id": "ref-wall-31",
+      "axis": "h",
+      "c": 237.096,
+      "from": 566.149,
+      "to": 608.578,
+      "thickness": 8.833
+    },
+    {
+      "id": "ref-wall-32",
+      "axis": "h",
+      "c": 237.096,
+      "from": 659.846,
+      "to": 755.311,
+      "thickness": 8.833
+    },
+    {
+      "id": "ref-wall-33",
+      "axis": "h",
+      "c": 237.096,
+      "from": 801.275,
+      "to": 960.383,
+      "thickness": 8.833
+    },
+    {
+      "id": "ref-wall-34",
+      "axis": "v",
+      "c": 608.578,
+      "from": 65.733,
+      "to": 240.63,
+      "thickness": 8.839
+    },
+    {
+      "id": "ref-wall-35",
+      "axis": "v",
+      "c": 712.882,
+      "from": 65.733,
+      "to": 240.63,
+      "thickness": 8.839
+    },
+    {
+      "id": "ref-wall-36",
+      "axis": "v",
+      "c": 958.615,
+      "from": 67.499,
+      "to": 242.396,
+      "thickness": 8.839
+    },
+    {
+      "id": "ref-wall-37",
+      "axis": "h",
+      "c": 327.195,
+      "from": 958.615,
+      "to": 1190.205,
+      "thickness": 8.833
+    },
+    {
+      "id": "ref-wall-38",
+      "axis": "v",
+      "c": 958.615,
+      "from": 290.095,
+      "to": 327.195,
+      "thickness": 8.839
+    },
+    {
+      "id": "ref-wall-39",
+      "axis": "h",
+      "c": 291.862,
+      "from": 362.845,
+      "to": 495.435,
+      "thickness": 8.833
+    },
+    {
+      "id": "ref-wall-40",
+      "axis": "h",
+      "c": 291.862,
+      "from": 541.399,
+      "to": 589.131,
+      "thickness": 8.833
+    },
+    {
+      "id": "ref-wall-41",
+      "axis": "h",
+      "c": 291.862,
+      "from": 633.328,
+      "to": 681.06,
+      "thickness": 8.833
+    },
+    {
+      "id": "ref-wall-42",
+      "axis": "v",
+      "c": 585.596,
+      "from": 291.862,
+      "to": 466.759,
+      "thickness": 8.839
+    },
+    {
+      "id": "ref-wall-43",
+      "axis": "v",
+      "c": 681.06,
+      "from": 291.862,
+      "to": 466.759,
+      "thickness": 8.839
+    }
+  ],
+  "objects": [
+    {
+      "id": "ref-door-1",
+      "category": "door",
+      "bbox": [
+        44.629,
+        235.33,
+        95.897,
+        244.163
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-door-2",
+      "category": "door",
+      "bbox": [
+        274.451,
+        235.33,
+        322.184,
+        244.163
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-door-3",
+      "category": "door",
+      "bbox": [
+        359.309,
+        242.396,
+        368.148,
+        288.329
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-door-4",
+      "category": "door",
+      "bbox": [
+        521.952,
+        233.563,
+        569.685,
+        242.396
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-door-5",
+      "category": "door",
+      "bbox": [
+        613.881,
+        233.563,
+        659.846,
+        242.396
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-door-6",
+      "category": "door",
+      "bbox": [
+        755.311,
+        233.563,
+        799.507,
+        242.396
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-door-7",
+      "category": "door",
+      "bbox": [
+        495.435,
+        288.329,
+        544.935,
+        297.162
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-door-8",
+      "category": "door",
+      "bbox": [
+        589.131,
+        288.329,
+        635.096,
+        297.162
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-door-9",
+      "category": "door",
+      "bbox": [
+        719.953,
+        461.459,
+        780.061,
+        473.825
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-door-10",
+      "category": "door",
+      "bbox": [
+        785.364,
+        336.028,
+        794.204,
+        422.593
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-door-11",
+      "category": "door",
+      "bbox": [
+        780.061,
+        516.225,
+        792.436,
+        595.723
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-door-12",
+      "category": "door",
+      "bbox": [
+        955.079,
+        242.396,
+        963.919,
+        290.095
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-window-1",
+      "category": "window",
+      "bbox": [
+        76.45,
+        51.6,
+        170.147,
+        71.033
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-window-2",
+      "category": "window",
+      "bbox": [
+        239.094,
+        51.6,
+        309.809,
+        71.033
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-window-3",
+      "category": "window",
+      "bbox": [
+        495.435,
+        51.6,
+        566.149,
+        71.033
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-window-4",
+      "category": "window",
+      "bbox": [
+        622.721,
+        51.6,
+        654.542,
+        71.033
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-window-5",
+      "category": "window",
+      "bbox": [
+        762.382,
+        51.6,
+        827.793,
+        71.033
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-window-6",
+      "category": "window",
+      "bbox": [
+        1001.044,
+        51.6,
+        1085.901,
+        71.033
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-window-7",
+      "category": "window",
+      "bbox": [
+        30.486,
+        279.496,
+        49.933,
+        362.527
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-window-8",
+      "category": "window",
+      "bbox": [
+        94.129,
+        457.926,
+        175.451,
+        477.359
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-window-9",
+      "category": "window",
+      "bbox": [
+        267.38,
+        457.926,
+        354.005,
+        477.359
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-window-10",
+      "category": "window",
+      "bbox": [
+        470.684,
+        457.926,
+        532.56,
+        477.359
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-window-11",
+      "category": "window",
+      "bbox": [
+        589.131,
+        457.926,
+        622.721,
+        477.359
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-window-12",
+      "category": "window",
+      "bbox": [
+        1179.598,
+        198.23,
+        1200.813,
+        281.262
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-window-13",
+      "category": "window",
+      "bbox": [
+        1179.598,
+        378.427,
+        1200.813,
+        461.459
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-window-14",
+      "category": "window",
+      "bbox": [
+        1179.598,
+        556.857,
+        1200.813,
+        638.123
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-window-15",
+      "category": "window",
+      "bbox": [
+        847.24,
+        703.488,
+        933.865,
+        722.921
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-window-16",
+      "category": "window",
+      "bbox": [
+        1047.008,
+        703.488,
+        1131.866,
+        722.921
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-bed-1",
+      "category": "bed",
+      "bbox": [
+        113.576,
+        247.696,
+        224.951,
+        360.761
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-bed-2",
+      "category": "bed",
+      "bbox": [
+        368.148,
+        74.566,
+        481.292,
+        148.765
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-bed-3",
+      "category": "bed",
+      "bbox": [
+        368.148,
+        148.765,
+        481.292,
+        208.83
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-bed-4",
+      "category": "bed",
+      "bbox": [
+        843.704,
+        74.566,
+        953.312,
+        150.531
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-bed-5",
+      "category": "bed",
+      "bbox": [
+        843.704,
+        150.531,
+        953.312,
+        208.83
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-bed-6",
+      "category": "bed",
+      "bbox": [
+        368.148,
+        327.195,
+        477.756,
+        383.727
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-bed-7",
+      "category": "bed",
+      "bbox": [
+        368.148,
+        408.46,
+        477.756,
+        463.226
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-sofa-1",
+      "category": "sofa",
+      "bbox": [
+        175.451,
+        426.126,
+        262.076,
+        464.992
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-sofa-2",
+      "category": "sofa",
+      "bbox": [
+        928.561,
+        551.557,
+        1041.705,
+        586.89
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-sofa-3",
+      "category": "sofa",
+      "bbox": [
+        871.99,
+        585.123,
+        907.347,
+        662.855
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-sofa-4",
+      "category": "sofa",
+      "bbox": [
+        1054.08,
+        585.123,
+        1091.205,
+        662.855
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-table-1",
+      "category": "table",
+      "bbox": [
+        986.901,
+        102.832,
+        1036.401,
+        184.097
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-table-2",
+      "category": "table",
+      "bbox": [
+        1008.115,
+        401.393,
+        1137.17,
+        447.326
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-table-3",
+      "category": "table",
+      "bbox": [
+        200.201,
+        385.494,
+        246.166,
+        427.893
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-table-4",
+      "category": "table",
+      "bbox": [
+        946.24,
+        608.09,
+        1024.026,
+        643.422
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-chair-1",
+      "category": "chair",
+      "bbox": [
+        87.058,
+        381.96,
+        134.79,
+        434.959
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-chair-2",
+      "category": "chair",
+      "bbox": [
+        993.972,
+        83.399,
+        1027.562,
+        104.599
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-chair-3",
+      "category": "chair",
+      "bbox": [
+        993.972,
+        180.564,
+        1027.562,
+        199.997
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-chair-4",
+      "category": "chair",
+      "bbox": [
+        969.222,
+        109.899,
+        988.669,
+        138.165
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-chair-5",
+      "category": "chair",
+      "bbox": [
+        969.222,
+        157.598,
+        988.669,
+        185.864
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-chair-6",
+      "category": "chair",
+      "bbox": [
+        1034.633,
+        109.899,
+        1055.848,
+        138.165
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-chair-7",
+      "category": "chair",
+      "bbox": [
+        1034.633,
+        157.598,
+        1055.848,
+        185.864
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-chair-8",
+      "category": "chair",
+      "bbox": [
+        986.901,
+        410.227,
+        1011.651,
+        436.726
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-chair-9",
+      "category": "chair",
+      "bbox": [
+        1135.402,
+        410.227,
+        1156.616,
+        436.726
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-chair-10",
+      "category": "chair",
+      "bbox": [
+        1013.419,
+        381.96,
+        1038.169,
+        404.927
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-chair-11",
+      "category": "chair",
+      "bbox": [
+        1057.616,
+        381.96,
+        1082.366,
+        404.927
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-chair-12",
+      "category": "chair",
+      "bbox": [
+        1101.812,
+        381.96,
+        1126.562,
+        404.927
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-chair-13",
+      "category": "chair",
+      "bbox": [
+        1013.419,
+        443.793,
+        1038.169,
+        466.759
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-chair-14",
+      "category": "chair",
+      "bbox": [
+        1057.616,
+        443.793,
+        1082.366,
+        466.759
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-chair-15",
+      "category": "chair",
+      "bbox": [
+        1101.812,
+        443.793,
+        1126.562,
+        466.759
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-toilet-1",
+      "category": "toilet",
+      "bbox": [
+        101.201,
+        65.733,
+        136.558,
+        109.899
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-toilet-2",
+      "category": "toilet",
+      "bbox": [
+        613.881,
+        106.365,
+        656.31,
+        145.231
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-toilet-3",
+      "category": "toilet",
+      "bbox": [
+        642.167,
+        300.695,
+        682.828,
+        348.394
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-sink-1",
+      "category": "sink",
+      "bbox": [
+        102.968,
+        199.997,
+        147.165,
+        237.096
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-sink-2",
+      "category": "sink",
+      "bbox": [
+        147.165,
+        199.997,
+        191.362,
+        237.096
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-sink-3",
+      "category": "sink",
+      "bbox": [
+        145.397,
+        62.2,
+        180.755,
+        104.599
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-sink-4",
+      "category": "sink",
+      "bbox": [
+        613.881,
+        74.566,
+        659.846,
+        111.665
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-sink-5",
+      "category": "sink",
+      "bbox": [
+        670.453,
+        169.964,
+        712.882,
+        221.197
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-sink-6",
+      "category": "sink",
+      "bbox": [
+        629.792,
+        366.061,
+        679.292,
+        410.227
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-bathtub-1",
+      "category": "bathtub",
+      "bbox": [
+        46.397,
+        74.566,
+        88.826,
+        173.498
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-bathtub-2",
+      "category": "bathtub",
+      "bbox": [
+        668.685,
+        71.033,
+        707.578,
+        173.498
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-wardrobe-1",
+      "category": "wardrobe",
+      "bbox": [
+        186.058,
+        63.966,
+        237.326,
+        127.565
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-wardrobe-2",
+      "category": "wardrobe",
+      "bbox": [
+        239.094,
+        63.966,
+        277.987,
+        129.332
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-wardrobe-3",
+      "category": "wardrobe",
+      "bbox": [
+        237.326,
+        169.964,
+        277.987,
+        240.63
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-wardrobe-4",
+      "category": "wardrobe",
+      "bbox": [
+        548.47,
+        291.862,
+        587.363,
+        461.459
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-wardrobe-5",
+      "category": "wardrobe",
+      "bbox": [
+        566.149,
+        67.499,
+        606.81,
+        237.096
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-wardrobe-6",
+      "category": "wardrobe",
+      "bbox": [
+        787.132,
+        288.329,
+        921.49,
+        336.028
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    },
+    {
+      "id": "ref-stove-1",
+      "category": "stove",
+      "bbox": [
+        1147.777,
+        132.865,
+        1186.67,
+        180.564
+      ],
+      "source": "manual-reference",
+      "reviewRequired": true,
+      "annotationStatus": "transferred-review-required"
+    }
+  ],
+  "assumptions": {
+    "wallHeightMeters": 2.7,
+    "doorHeightMeters": 2.1,
+    "windowSillMeters": 0.9,
+    "windowHeightMeters": 1.2,
+    "furnitureHeights": "Valores de catálogo aproximados; no inferidos del plano."
+  },
+  "naturalSize": [
+    1280,
+    749
+  ]
+}

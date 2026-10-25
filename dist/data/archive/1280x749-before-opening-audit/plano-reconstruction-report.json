@@ -1,0 +1,71 @@
+{
+  "scope": "single-image-initial-manual-reference",
+  "imageSha256": "9f3f598dd2db7f26fa7374c0b5bbbf7764e70bda9febb9aca65243fe3389f049",
+  "width": 1280,
+  "height": 749,
+  "referenceStatus": "transferred-initial-review",
+  "referenceRegistration": {
+    "method": "SIFT-RANSAC-axis-aligned-affine",
+    "matches": 587,
+    "inliers": 466,
+    "medianErrorPixels": 0.2887,
+    "scaleX": 1.7678651074647898,
+    "scaleY": 1.766634809491166,
+    "translateX": 0.4322826667948045,
+    "translateY": 0.3673351033053618
+  },
+  "confidence": 0.35,
+  "stats": {
+    "originalRegions": 24,
+    "cleanedRegions": 20,
+    "originalVertices": 3146,
+    "cleanedVertices": 1110,
+    "footprintIou": 0.9003761861091876,
+    "associatedOpenings": 21,
+    "unmatchedOpenings": 15,
+    "conservativeFallback": true,
+    "appliedTolerancePixels": 1.0599056603773584
+  },
+  "originalWallIou": 0.5949077748499952,
+  "reconstructedFootprintIou": 0.602376743892431,
+  "detectionMetricsUnchanged": {
+    "tp": 23,
+    "fp": 29,
+    "fn": 20,
+    "precision": 0.4423076923076923,
+    "recall": 0.5348837209302325
+  },
+  "openingsByCategory": {
+    "door": 6,
+    "window": 15
+  },
+  "unmatchedOpeningIds": [
+    "semantic-29",
+    "semantic-35",
+    "semantic-30",
+    "semantic-37",
+    "semantic-34",
+    "semantic-24",
+    "semantic-23",
+    "semantic-32",
+    "semantic-20",
+    "semantic-19",
+    "semantic-3",
+    "semantic-33",
+    "semantic-14",
+    "semantic-6",
+    "semantic-13"
+  ],
+  "furniture": {
+    "shown": 51,
+    "orientationFromWall": 14,
+    "rejected": []
+  },
+  "limitations": [
+    "Only the 2D footprint is evaluated here, before restoring lintels and sills.",
+    "Wall association does not validate an opening category.",
+    "No model retraining or reference-guided geometry correction.",
+    "Catalogue heights and heuristic furniture orientation require review.",
+    "This report uses provisional scale; user measurements are stored per image in the browser."
+  ]
+}

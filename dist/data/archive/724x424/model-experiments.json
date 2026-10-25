@@ -1,0 +1,20 @@
+{
+  "scope": "Exploratory execution on plano.jpeg, without fine-tuning",
+  "experiments": [
+    {
+      "model": "https://huggingface.co/Yytsi/floorplan-to-3d-walls",
+      "architecture": "ResNet34-UNet",
+      "wallRegions": 0,
+      "selected": false,
+      "reason": "No wall regions recovered from this raster floor plan."
+    },
+    {
+      "model": "https://github.com/CubiCasa/CubiCasa5k",
+      "architecture": "hourglass",
+      "wallRegions": 35,
+      "selected": true
+    }
+  ],
+  "objectDetector": "https://github.com/REIkd/FYP-Floorplan",
+  "manualReferenceUsedForInference": false
+}

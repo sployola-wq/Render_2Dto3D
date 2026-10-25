@@ -1,0 +1,20 @@
+{
+  "models": [
+    {
+      "path": "models/cubicasa.pkl",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1gRB7ez1e4H7a9Y09lLqRuna0luZO5VRK&export=download&confirm=t",
+      "source": "https://github.com/CubiCasa/CubiCasa5k",
+      "sha256": "dd20b4e1bf1d670f2125107b079df06958b1ccd36e49a464ab739aeb00b8e7a2",
+      "bytes": 208651193,
+      "licenseNote": "CC BY-NC 4.0, upstream architecture and dataset; research baseline"
+    },
+    {
+      "path": "models/furniture-yolov8.pt",
+      "downloadUrl": "https://raw.githubusercontent.com/REIkd/FYP-Floorplan/main/models/detection/yolov8_best.pt",
+      "source": "https://github.com/REIkd/FYP-Floorplan",
+      "sha256": "8f0551c63accaf77a7c6edddc713db8a0666157f84b463bef1af06e42ee870a2",
+      "bytes": 6262122,
+      "licenseNote": "No explicit checkpoint license found in upstream repository; not redistributed in the published site"
+    }
+  ]
+}
