@@ -1,4 +1,4 @@
-# Prodalam Render Pro v2.8
+# Prodalam Render Pro v2.9
 
 Aplicación local de preparación de planos y reconstrucción 3D. Repositorio de esta entrega: [sployola-wq/Render_2Dto3D](https://github.com/sployola-wq/Render_2Dto3D).
 
@@ -7,6 +7,16 @@ npm start
 ```
 
 Abrir **http://127.0.0.1:4173**. Los recursos del navegador se incluyen en `dist/vendor`; la vista estática no requiere instalar dependencias para iniciar. Node.js 20 o superior.
+
+## Cambios v2.9 · Profundidad arquitectónica y metal sin trazos
+
+La opción exterior **Propuesta volumétrica** construye muros perforados, ventanas rehundidas, marcos, alféizares, cortinas con volumen, aleros, tablas de revestimiento, terraza trasera, pérgola y balcón con acceso y barandas. Las ventanas frontales se orientan por la lámina; los laterales y el fondo se completan como **diseño propuesto**, según la solicitud del usuario. No son datos recuperados de las partes ocultas del proyecto. La alternativa **Alzado técnico** conserva la extrusión anterior.
+
+Las caras del corte mecánico usan metal mecanizado y las superficies exteriores usan acabado de fundición: **ya no se proyectan el dibujo ni su rayado sobre la pieza**. Los vacíos siguen siendo geometría. Se generaron con IA un atlas de materiales y un entorno de reflejos, incluidos en [dist/assets/materials](dist/assets/materials), con [prompts y procedencia](dist/assets/materials/provenance-v29.json). No se adhieren fotografías de fachada al nuevo modelo volumétrico.
+
+El Paso 2 añade **Render 3D realista**, con perspectiva, materiales y sombras del mismo modelo del Paso 3. El comparador vuelve a la proyección frontal. El visor añade cámaras lateral/trasera, encuadra considerando la profundidad y evita redibujar continuamente una escena quieta.
+
+Verificación: **113 pruebas Node y 4 Python**, huecos reales por raycast, acceso al balcón trasero, materiales sin imagen del plano, encuadre desde varios lados y regresión real del interior con 8 pisos texturados y 53 muebles. El núcleo interior sigue sin cambios. Ver [reports/profundidad-12.md](reports/profundidad-12.md).
 
 ## Cambios v2.8 · Corte mecánico y fachada IA
 

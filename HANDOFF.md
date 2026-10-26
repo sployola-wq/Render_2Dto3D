@@ -1,3 +1,15 @@
+# Profundidad y acabados v2.9 — 26 de octubre de 2026
+
+`exterior-layout.js` agrupa las ventanas del dibujo y diseña retornos/fondo; `exterior-building.js` construye muros con huecos reales, marcos rehundidos, vidrio, interiores sugeridos, aleros, jardineras y terraza/pérgola/balcón traseros. El usuario autorizó imaginar las partes ocultas: están etiquetadas como propuesta, no geometría observada. El modo anterior sigue como Alzado técnico. El JSON exporta `proposal` en metros.
+
+El corte ya no recibe la imagen original en sus materiales. `mechanical-solid.js` usa metal mecanizado/de fundición y variación de rugosidad desde un atlas IA, en espacio de color de datos. Mantiene perfiles y vacíos. Assets y prompts en `dist/assets/materials/provenance-v29.json`; el entorno es LDR, no una captura HDR calibrada. Los recursos incluidos funcionan localmente.
+
+Paso 2 ofrece Render 3D realista, separado de la proyección frontal y de la imagen IA v2.8. El comparador selecciona la proyección frontal y el PNG respeta la vista elegida. El visor añade cámaras trasera/lateral, ajuste por esquinas proyectadas y renderizado cuando cambia la escena/cámara, en lugar de redibujar constantemente mientras está quieta.
+
+113 pruebas Node y 4 Python aprobadas. Regresión real del interior: 53 propuestas de mobiliario/equipo, 34 aberturas, referencia aprobada 2752×1536; 8 pisos con textura y 53 muebles en 3D. Los seis archivos del núcleo residencial siguen idénticos a la base publicada. Base remota anterior: e31a307, v2.8. Publicación de v2.9 solicitada por el usuario durante la revisión final. Servidor existente: sesión 43145, puerto 4173; frontend servido directamente. Pestaña de trabajo `?review=2.9-volumetric`; QA temporal `?qa=2.9-final`. Ver `reports/profundidad-12.md`.
+
+---
+
 # Corte mecánico y fachada IA v2.8 — 26 de octubre de 2026
 
 El usuario pidió detalles internos reales y una fachada más rica. Se añadieron `mechanical-section.js` (material/espacios cerrados, convención de eje, elementos circulares observados y vectores de sección), `mechanical-solid.js` (medias revoluciones, superficies interiores y caras materiales de corte) y `exterior-appearance.js` (paleta/revestimiento/reflejos de la presentación). Los trazos del dibujo se conservan sobre las caras del corte, pero los vacíos tienen geometría y no son solo una lámina decorativa. El núcleo blanco puede interpretarse como vacío o como eje sin seccionar; es una decisión explícita. El corte no es un despiece CAD certificado.

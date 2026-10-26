@@ -1,0 +1,31 @@
+{
+  "version": "2.9",
+  "mode": "Codex built-in image generation",
+  "assets": [
+    {
+      "file": "material-atlas-v29.png",
+      "kind": "generated",
+      "tool": "image_gen",
+      "provider": "OpenAI",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "sha256": "fefe72eb8d5ddc5a59d675c140ecae10f0e3405d805b320451addef59bf074e5",
+      "prompt": "Create one square high-resolution 2048x2048 PBR BASE COLOR TEXTURE ATLAS, a precisely aligned 2x2 grid of four equal square edge-to-edge material swatches with no gaps, borders or labels. The reference image is a COLOR/MATERIAL STYLE REFERENCE only, never reproduce its building, windows, architecture, shadows or perspective. UPPER LEFT quadrant: seamless fine warm off-white mineral plaster micrograin, natural pale ivory shade matching the reference walls, subtle evenly distributed micropores, no large marks. UPPER RIGHT quadrant: seamless natural honey cedar timber boards running horizontally across the swatch, subtle grain and restrained narrow horizontal joints, matching the reference wood siding, no screws or hardware. LOWER LEFT quadrant: seamless realistic satin machined silver steel microtexture, very faint microscopic machining grain, no pronounced lines, no drawing marks, pale neutral silver. LOWER RIGHT quadrant: seamless realistic medium cool-gray cast aluminum subtle microscopic pebbled grain, no oxidation stains. Every quadrant photographed exactly flat head-on with neutral diffuse uniform cross-polarized lighting; no baked specular highlights, no directional shading, no gradients, no objects, no lettering, no hatching, no CAD lines, no diagrams, no depth, no frame, no watermark. These four raw material color maps will be sampled and repeated on actual 3D surfaces illuminated by the application. Keep quadrant boundaries exactly halfway in both axes, full bleed."
+    },
+    {
+      "file": "daylight-environment-v29.png",
+      "kind": "generated",
+      "tool": "image_gen",
+      "provider": "OpenAI",
+      "dimensions": [
+        1774,
+        887
+      ],
+      "sha256": "43b1100ccd2d4a4d9b8a70a47c7d0a9f9b2e5617d883d4ccca1f65cb0e3e1ac9",
+      "prompt": "Generate one photorealistic outdoor LIGHTING ENVIRONMENT MAP: seamless 360-degree equirectangular latitude-longitude panorama, aspect ratio 2:1, for reflections on architectural glass. Bright soft daylight, clean pale blue sky with beautiful broad soft white clouds in upper 65 percent, distant unobtrusive green Mediterranean trees along a low natural horizon, neutral light stone ground in lower 25 percent. A broad warm sun glow to the upper left, no visible blazing sun disk. Full panorama, correct equirectangular projection, left/right edges must connect seamlessly. No buildings, no people, no vehicles, no architecture, no text or logos, no illustration, no borders. High dynamic range photographic appearance with natural neutral exposure, detailed sky suitable for realistic reflections and ambient lighting in a 3D building viewer. Output a single flat texture image, not a photo of a sphere or a material sample."
+    }
+  ],
+  "notes": "Atlas used for surface grain and material finish; environment is an LDR reflection panorama, not a calibrated HDR light probe. Material choices and unseen architecture are visual design proposals."
+}
