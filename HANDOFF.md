@@ -1,3 +1,39 @@
+# Corte mecánico y fachada IA v2.8 — 26 de octubre de 2026
+
+El usuario pidió detalles internos reales y una fachada más rica. Se añadieron `mechanical-section.js` (material/espacios cerrados, convención de eje, elementos circulares observados y vectores de sección), `mechanical-solid.js` (medias revoluciones, superficies interiores y caras materiales de corte) y `exterior-appearance.js` (paleta/revestimiento/reflejos de la presentación). Los trazos del dibujo se conservan sobre las caras del corte, pero los vacíos tienen geometría y no son solo una lámina decorativa. El núcleo blanco puede interpretarse como vacío o como eje sin seccionar; es una decisión explícita. El corte no es un despiece CAD certificado.
+
+Fachada IA generada realmente con `image_gen` desde `images (3).jpeg`. Asset nativo 1662×946 `dist/assets/presentation/facade-ai-v28.png`; procedencia y prompt en su JSON adyacente. `GENERATED_EXTERIOR_PROJECTS` la vincula solo al SHA real 81331e9731e53cb39c46ec13616d3e519998f829a38610496a8332ced6a3641d. La restauración usa `kind:generated`, no `linked` ni inferencia. El 3D recupera su color, textura de revestimiento y vidrios; las caras ocultas siguen siendo aproximadas. Para otras láminas se necesita su generación/importación propia: la API genérica existe, pero no hay clave en este servidor. No presentar el ejemplo incluido como IA universal autónoma.
+
+Se corrigieron precisión de profundidad y capas de fachada para eliminar z-fighting; los acabados manuales no se ofrecen cuando gobierna una presentación IA. Paso 2 oculta parámetros de geometría y expone las herramientas IA de fachada. El interior no cambió: 53 propuestas, 34 aberturas, referencia 2752×1536, 8 pisos con textura y 53 muebles en la regresión real. 104 pruebas Node + 4 Python aprobadas. Ver `reports/cortes-y-fachadas-11.md`.
+
+Servidor reiniciado con el backend actualizado: sesión 43145, puerto 4173. Revisión de entrega `?review=2.8-cutaway`. Sin commit/push nuevo. Base publicada sigue 3e1e079 de v2.5; las mejoras v2.6/v2.7/v2.8 están locales. Los seis archivos del núcleo residencial siguen idénticos a HEAD.
+
+---
+
+# Ruteo efectivo v2.7 — 26 de octubre de 2026
+
+La captura del usuario reveló que v2.6 sugería Ingeniería pero mantenía Interior: las comprobaciones anteriores mediante selección manual no cubrían la carga ordinaria. Se corrigió el flujo real: Automático resuelve la disciplina antes de la inferencia residencial, migra los antiguos valores por defecto y bloquea rutas incompatibles. Después de inferir, una segunda comprobación exige evidencia de planta antes de habilitar Pasos 2/3 residenciales. Confirmar un interior con evidencia escasa requiere la opción manual visible.
+
+`drawing-routing.js` separa estas decisiones del visor. `discipline-render.js` genera el Paso 2 directamente desde la malla especializada con el encuadre de la lámina; reemplaza la imagen recoloreada de v2.6. El estudio 3D incorpora entorno de reflexión local y luces moderadas. La detección de capas estructurales DXF selecciona una capa única y descarta las cotas ajenas al procesar. Parámetros y referencias permanecen separados por SHA y disciplina.
+
+95 pruebas Node y 4 Python aprobadas. En navegador se subió realmente `images (4).jpeg` sin elegir Ingeniería ni usar el botón de ejemplo: Automático seleccionó Ingeniería, generó una envolvente metálica y conservó su proyección entre los Pasos 2 y 3. Forzar Interior sin verificar mantuvo desactivado el procesamiento y ambos pasos siguientes. `images (3).jpeg` usó fachada. Un DXF nuevo de prueba se identificó automáticamente como Estructura, tomó S_ESTRUCTURA y generó 7 barras, excluyendo COTAS. El interior real `images (2).jpeg` conservó el diseño vinculado 2752×1536, 8 pisos con textura y 53 muebles. Los seis archivos del núcleo residencial siguen idénticos a HEAD v2.5.
+
+Pruebas: `npm test` y `.venv/bin/python -m unittest discover -s tests -p '*_test.py'`. Servidor local en puerto 4173 (sesión 77282), pestaña de entrega `?review=2.7-routing`. Sin generación externa ni clave API configurada. Cambios v2.6/v2.7 aplicados localmente, **sin commit/push**; base publicada 3e1e079. Una envolvente no es el ensamblaje completo y una extrusión de alzado no reconstruye caras ocultas; estos límites aparecen en la interfaz y el JSON. Ver `reports/ruteo-10.md`.
+
+---
+
+# Multidisciplina v2.6 — 26 de octubre de 2026
+
+Código aplicado localmente; todavía sin commit ni push de esta versión. Base publicada: 3e1e079 (v2.5). El servidor se reinició en esta revisión con `npm start`, sesión 77282, http://127.0.0.1:4173.
+
+Se añadieron cuatro módulos independientes `discipline-analysis.js`, `discipline-models.js`, `discipline-controller.js`, `discipline-viewer.js`; el selector en Paso 1 mantiene Interior como opción original. Exterior extrae silueta/paños y extruye un alzado; mecánica admite revolución exterior, medias secciones explícitas y extrusión con huecos; estructuras usan ejes raster/DXF y secciones I/tubulares. Hay región, trazado, edición de barras, unidades/capas DXF, medición real sobre la malla, sección visual y JSON/STL. No confundir envolvente de revolución con reconstrucción de un ensamblaje ni volumetría de alzado con caras ocultas inferidas.
+
+88 pruebas Node y 4 Python aprobadas. Se revisaron los dos JPEG del usuario en los modos específicos. Se verificó un DXF sintético: 7 barras de ESTRUCTURA, excluida la línea de COTAS, unidades CAD declaradas. Se volvió a cargar realmente `images (2).jpeg`: inferencia local con 53 propuestas de equipo/mobiliario, 34 de aberturas, 28 aberturas con soporte; el Paso 3 conservó 8 zonas con textura y 53 muebles ambientados. `app.js`, `architecture.js`, `components.js`, `detector.js`, `appearance-3d.js` y `appearance-mapping.js` no cambiaron respecto de la v2.5.
+
+Los estudios se guardan por SHA y disciplina en localStorage; las presentaciones en IndexedDB conservan la clave antigua de interiores y usan prefijos por disciplina para los nuevos modos. Los prompts CGI se separan por disciplina, sin reutilizar instrucciones de parquet/interiores en ingeniería. No se configuró clave OpenAI ni se realizó generación externa. Detalles: `reports/multidisciplina-09.md`.
+
+---
+
 # Diseño vinculado v2.5 — 25 de octubre de 2026
 
 Se recuperó explícitamente el CGI aprobado de v2.3 para este plano (no era una generación local). `dist/presentation-projects.js` permite solo los dos SHA exactos del ejemplo 1280×749 y del JPEG aportado 724×424; asset nativo `dist/assets/presentation/reference-v23.png` SHA 881b59749fe4043a63095e58c2eae4b2e4f7ca6219987386bb7149b2026efb8d. `kind:linked` nunca declara validación geométrica. Nunca usar esta referencia para inferencia ni otros planos.

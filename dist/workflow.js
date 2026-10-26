@@ -1,4 +1,5 @@
-import { REFERENCE_PROJECTS, createPresentationStore, canRestorePresentation } from './presentation-projects.js';
+import { createDisciplineController } from './discipline-controller.js';
+import { REFERENCE_PROJECTS,GENERATED_EXTERIOR_PROJECTS, createPresentationStore, canRestorePresentation } from './presentation-projects.js';
 import { estimateReferenceRegistration, registrationFromBounds } from './reference-surfaces.js';
 import { refineStructure } from './structure-evidence.js';
 import { summarizeAnalysis } from './analysis-quality.js';
@@ -15,6 +16,8 @@ const $=id=>document.getElementById(id), readStore=(key,fallback)=>{try{return J
 const model={step:1,queue:[],asset:null,selection:0,version:0,processed:false,boundary:[],mode:null,points:[],measurements:[],calibration:null,bounds:null,vectors:null,render:null,compare:true,threeRuler:false,busy:false,view:{zoom:1,panX:0,panY:0},panEnabled:false,sourceOnly:false,presentation:null,renderRecord:null};
 const original=$('originalCanvas'),render=$('renderCanvas'),overlay=$('measureCanvas');
 const clean=document.createElement('canvas'),preview=document.createElement('canvas');
+const discipline=createDisciplineController({panel:$('disciplinePanel'),host:$('discipline3Host'),source:()=>({canvas:clean,overlay,asset:model.asset,calibration:model.calibration,busy:model.busy,presentation:model.presentation}),onChange:handleDisciplineChange,onTool:()=>{model.mode=null;model.points=[];model.panEnabled=false;$('rulerToggle').setAttribute('aria-pressed','false');$('areaToggle').setAttribute('aria-pressed','false');applyBoardTransform();},message:(...args)=>message(...args),goStep:step=>setStep(step)});
+
 let cgiConfigured=false,cgiAbort=null;
 let topRenderer,lastCalibration,lastWorkflowHash,extensionGroup=new THREE.Group(),last3DModel,textureModel,frameId;
 extensionGroup.name='ProdalamV2TechnicalOverlay';
@@ -38,20 +41,21 @@ const nextPaint=()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimat
 function save(blob,name){const a=document.createElement('a'),url=URL.createObjectURL(blob);a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);}
 const blobFromCanvas=canvas=>new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('No se pudo convertir la lámina.')),'image/png'));
 function fmt(n,digits=2){return n.toLocaleString('es-CL',{maximumFractionDigits:digits,minimumFractionDigits:digits});}
-function scale(){return model.calibration?.metersPerPixel??24/clean.width;}
+function scale(){return discipline.active?discipline.metersPerPixel:model.calibration?.metersPerPixel??24/clean.width;}
 function distanceLabel(value){return $('measureUnit').value==='mm'?`${fmt(value*1000,0)} mm`:`${fmt(value)} m`;}
 function setBusy(busy){
   model.busy=busy;
   $('boardStage').setAttribute('aria-busy',String(busy));
-  for(const id of ['replacePlanFiles','newProjectButton','flowFiles','pdfPage','loadExample','chooseBoardFiles'])$(id).disabled=busy;
+  for(const id of ['replacePlanFiles','newProjectButton','flowFiles','pdfPage','loadExample','loadExteriorExample','loadMechanicalExample','chooseBoardFiles'])$(id).disabled=busy;
   for(const id of ['processVectors','vectorWidth','grayscale','invertContrast','flowCalibrate','rulerToggle','areaToggle','closeArea','clearMeasurements','dimensionToggle','measureUnit','resetBoard','paperCleanup','sourcePreview','boardZoomIn','boardZoomOut','boardPan','downloadClean'])$(id).disabled=busy||!model.asset;
+  $('processVectors').disabled=busy||!model.asset||discipline.routingBlocked;
   $('advance3d').disabled=busy||!model.processed;
   for(const id of ['finishPreset','finishPrompt','importCGI','renderSource','proceedStep2'])$(id).disabled=busy||!model.processed;
   $('generateCGI').disabled=busy||!model.processed||!cgiConfigured;
   $('vectorOverlay').disabled=busy||!model.processed;
   $('downloadVectors').disabled=busy||!model.vectors;
   for(const el of document.querySelectorAll('.flow-step'))el.disabled=busy||(['2','3'].includes(el.dataset.step)&&!model.processed);
-  for(const el of $('fileQueue').querySelectorAll('button'))el.disabled=busy;
+  for(const el of $('fileQueue').querySelectorAll('button'))el.disabled=busy;discipline.ui();
 }
 function fitBoard(){
   if(!model.asset||model.step===3)return;
@@ -70,20 +74,24 @@ new ResizeObserver(fitBoard).observe($('boardStage'));
 function setStep(step){
   if(model.busy||step>1&&!model.processed)return;
   if(document.body.classList.contains('desk-focus'))$('focusDesk').click();
-  const previousStep=model.step;model.step=step;if(previousStep!==step)document.querySelector('.flow-sidebar').scrollTop=0;$('workflow').hidden=step===3;$('step3Host').hidden=step!==3;
+  const previousStep=model.step;model.step=step;document.body.dataset.workflowStep=String(step);if(previousStep!==step)document.querySelector('.flow-sidebar').scrollTop=0;$('workflow').hidden=step===3;$('step3Host').hidden=step!==3||discipline.active;$('discipline3Host').hidden=step!==3||!discipline.active;discipline.show(step===3&&discipline.active);
   for(const el of document.querySelectorAll('.flow-step')){const selected=Number(el.dataset.step)===step;el.classList.toggle('active',selected);el.classList.toggle('done',Number(el.dataset.step)<step);if(selected)el.setAttribute('aria-current','step');else el.removeAttribute('aria-current');}
+  if(step===3&&discipline.active){appearance.restore();appearanceApplied=false;extensionGroup.visible=false;toolbar.hidden=true;return;}
   if(step===3){bridge.show3D();refreshThree();syncAppearance(true);return;}
   appearance.restore();appearanceApplied=false;
   $('flowTitle').innerHTML=step===1?'Todo comienza<br>con un plano.':'Del trazo<br>al espacio.';
   $('flowDescription').textContent=step===1?'Prepara tu lámina, define una escala y transforma el trazo en espacio.':'Desliza la cortina para comprobar la alineación de la geometría sobre el plano.';
-  $('boardEyebrow').textContent=step===1?'PASO 1 / MESA TÉCNICA':'PASO 2 / RENDER CENITAL';
+  $('boardEyebrow').textContent=step===1?'PASO 1 / MESA TÉCNICA':discipline.active?'PASO 2 / VISTA TÉCNICA':'PASO 2 / RENDER CENITAL';document.querySelector('[data-step="2"] span').firstChild.textContent=discipline.active?'Vista procesada':'Render cenital';
   for(const id of ['preprocessControls','processVectors'])$(id).hidden=step!==1;
   for(const id of ['advance3d','backToPlan','comparatorControls','downloadRender','renderBadge'])$(id).hidden=step!==2;
-  $('step2Controls').hidden=step!==2;$('fileQueue').hidden=step!==1||model.queue.length<2;$('replacePlanFiles').hidden=step!==1;
+  if(discipline.active)$('processVectors').hidden=true;
+  $('step2Controls').hidden=step!==2;const cgiDetails=$('step2Controls').querySelector('details');if(step===2&&discipline.domain==='exterior'&&cgiDetails)cgiDetails.open=true;$('generateCGI').textContent=discipline.domain==='exterior'?'✦ Generar fachada con IA':'✦ Generar con OpenAI';$('fileQueue').hidden=step!==1||model.queue.length<2;$('replacePlanFiles').hidden=step!==1;
   $('proceedStep2').hidden=step!==1||!model.processed;
   $('extractionStatus').hidden=step!==1||!model.processed;
   $('downloadClean').hidden=step!==1;
   render.hidden=step!==2||model.sourceOnly;$('curtainLine').hidden=step!==2||!model.compare;
+  $('renderMode').textContent=discipline.active?'Vista procesada':'Render cenital';$('renderSource').querySelector('[value="technical"]').textContent=discipline.active?'Proyección del modelo especializado':'Render local ambientado';
+  if(discipline.active)$('flowDescription').textContent=step===1?'Define la disciplina, revisa el perfil y especifica los parámetros del modelo.':'Compara la lámina con su interpretación técnica. Revisa contornos y supuestos antes de ir a 3D.';
   drawBoard();applyCurtain();requestAnimationFrame(fitBoard);
 }
 for(const el of document.querySelectorAll('.flow-step'))el.onclick=()=>setStep(Number(el.dataset.step));
@@ -115,9 +123,9 @@ $('confirmNewProject').onclick=()=>{$('newProjectDialog').close();resetProject()
 function resetProject(){
   const oldAssets=model.queue,hashes=new Set(oldAssets.map(a=>a.identity).filter(Boolean));
   if(model.processedHash)hashes.add(model.processedHash);
-  for(const hash of hashes)try{localStorage.removeItem(`prodalam.scale.${hash}`);localStorage.removeItem(`blueprint.scale.v1.${hash}`);}catch{}
+  for(const hash of hashes)try{for(const d of ['interior','exterior','mechanical','structure'])localStorage.removeItem(`prodalam.discipline.v1.${hash}.${d}`);localStorage.removeItem(`prodalam.discipline.v1.${hash}`);localStorage.removeItem(`prodalam.scale.${hash}`);localStorage.removeItem(`blueprint.scale.v1.${hash}`);}catch{}
   Object.assign(model,{step:1,queue:[],asset:null,source:null,selection:model.selection+1,version:model.version+1,processed:false,processedHash:null,boundary:[],mode:null,points:[],measurements:[],calibration:null,bounds:null,vectors:null,render:null,compare:true,threeRuler:false,busy:false,view:{zoom:1,panX:0,panY:0},panEnabled:false,sourceOnly:false,presentation:null,renderRecord:null});
-  appearance.restore();appearanceApplied=false;appearanceImage=null;appearancePixels=null;resetAppearanceOptions();
+  discipline.show(false);discipline.reset();document.body.dataset.drawingDomain='interior';appearance.restore();appearanceApplied=false;appearanceImage=null;appearancePixels=null;resetAppearanceOptions();
   lastCalibration=null;textureModel=null;resetPresentation();$('paperCleanup').checked=false;$('vectorOverlay').checked=false;$('sourcePreview').value='prepared';$('boardPan').setAttribute('aria-pressed','false');
   disposeOverlay();
   topRenderer?.dispose();topRenderer?.forceContextLoss();topRenderer=null;
@@ -158,10 +166,11 @@ async function selectAsset(asset){
     $('grayscale').checked=false;$('invertContrast').checked=false;$('vectorWidth').value='1';$('vectorWidthValue').textContent='1,0 px';
     drawQueue();$('rulerResult').textContent='Selecciona la regla y marca dos puntos.';$('boardFilename').textContent=asset.name+(asset.kind==='pdf'?` · página ${asset.page}`:'');$('pdfPageRow').hidden=asset.kind!=='pdf';
     if(asset.pdf){$('pdfPage').replaceChildren(...Array.from({length:asset.pdf.numPages},(_,i)=>new Option(`${i+1} / ${asset.pdf.numPages}`,i+1)));$('pdfPage').value=asset.page;}
-    prepareClean();
+    discipline.reset();prepareClean();
     const bytes=asset.kind==='image'?await asset.file.arrayBuffer():await (await blobFromCanvas(clean)).arrayBuffer();
     asset.identity=[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(b=>b.toString(16).padStart(2,'0')).join('');
     try{model.calibration=restoreCalibration(localStorage.getItem(`prodalam.scale.${asset.identity}`),{imageSha256:asset.identity,width:clean.width,height:clean.height});}catch{}
+    discipline.load();configureDisciplineUI();if(discipline.active)$('measureUnit').value=discipline.calibrationUnit;
     setBusy(false);setStep(1);updateMetrics();
     const omitted=dxf?.unsupported.length?` Entidades omitidas: ${dxf.unsupported.join(', ')}.`:'';
     message(`${asset.kind==='dxf'?'DXF importado como trazos 2D.':asset.kind==='pdf'?'Página PDF rasterizada localmente; extrae los contornos para continuar.':'Lámina lista. Ajusta su presentación y procesa los vectores.'}${omitted}${asset.cadMetersPerPixel?' Unidades CAD disponibles; confirma una cota antes de medir.':''}`);
@@ -205,9 +214,12 @@ function drawOverlay(){
   if(model.boundary.length){ctx.fillStyle='#0086cb16';ctx.strokeStyle='#0086cb';ctx.lineWidth=2;ctx.beginPath();model.boundary.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.fill();ctx.stroke();}
   if(model.mode==='area'&&model.points.length>1)for(let i=1;i<model.points.length;i++)line2D(ctx,model.points[i-1],model.points[i],'');
   for(const p of model.points)line2D(ctx,p,p,'','#cb8730');
+  if(model.step===1||discipline.pending||$('vectorOverlay').checked)discipline.draw(ctx);
   if($('dimensionToggle').checked&&model.bounds){const b=model.bounds,y=Math.max(18,b.y0-18),x=Math.min(clean.width-20,b.x1+18);line2D(ctx,[b.x0,y],[b.x1,y],`${model.calibration?'':'≈ '}${distanceLabel(b.width*scale())}`);line2D(ctx,[x,b.y0],[x,b.y1],`${model.calibration?'':'≈ '}${distanceLabel(b.height*scale())}`);}
 }
 function updateMetrics(){
+  if(discipline.active){updateDisciplineMetrics();drawOverlay();return;}
+  for(const [id,label]of [['metricLength','LARGO TOTAL'],['metricWidth','ANCHO TOTAL'],['metricPerimeter','PERÍMETRO'],['metricArea','SUPERFICIE']])$(id).previousElementSibling.textContent=label;
   const b=model.bounds??(model.boundary.length?boundsOf(model.boundary):null),s=scale(),provisional=!model.calibration;
   $('flowScaleStatus').textContent=!model.asset?'Carga un plano para definir su escala.':model.calibration?`Escala calibrada · ${fmt(s*1000,3)} mm / píxel`:'Sin calibrar · ancho de imagen supuesto de 24 m';
   const boundaryMetrics=model.boundary.length?polygonMetrics(model.boundary,s):null;
@@ -216,28 +228,31 @@ function updateMetrics(){
   $('metricNote').textContent=boundaryMetrics?`Superficie y perímetro del contorno definido por el usuario.${provisional?' Escala provisional: calibra una distancia.':''}`:b?`Envolvente rectangular de la estructura detectada; superficie y perímetro de esa envolvente, no superficie útil.${provisional?' Escala provisional: calibra una distancia conocida.':' Medidas según la calibración del usuario.'}`:'Procesa el plano para medir la envolvente de la estructura. La superficie útil requiere delimitar su contorno.';
   if(model.measurements.length){const m=model.measurements.at(-1);$('rulerResult').textContent=`${model.calibration?'':'Provisional · '}${distanceLabel(distance(...m,s))} · ${model.measurements.length} medición(es)`;}drawOverlay();
 }
-function tool(mode){model.panEnabled=false;$('boardPan').setAttribute('aria-pressed','false');applyBoardTransform();model.mode=model.mode===mode?null:mode;model.points=[];$('rulerToggle').setAttribute('aria-pressed',String(model.mode==='ruler'));$('areaToggle').setAttribute('aria-pressed',String(model.mode==='area'));$('closeArea').hidden=model.mode!=='area';$('boardFrame').classList.toggle('measuring',!!model.mode);message(model.mode==='area'?'Marca los vértices del perímetro en orden y pulsa Cerrar contorno. Evita cruces entre segmentos.':model.mode==='calibrate'?'Calibración: marca dos puntos separados al menos 10 píxeles y escribe su distancia real.':model.mode==='ruler'?'Regla: marca dos puntos. La distancia se calcula sobre el plano.':'Herramienta desactivada.');drawOverlay();}
+function tool(mode){discipline.cancelTool();model.panEnabled=false;$('boardPan').setAttribute('aria-pressed','false');applyBoardTransform();model.mode=model.mode===mode?null:mode;model.points=[];$('rulerToggle').setAttribute('aria-pressed',String(model.mode==='ruler'));$('areaToggle').setAttribute('aria-pressed',String(model.mode==='area'));$('closeArea').hidden=model.mode!=='area';$('boardFrame').classList.toggle('measuring',!!model.mode);message(model.mode==='area'?'Marca los vértices del perímetro en orden y pulsa Cerrar contorno. Evita cruces entre segmentos.':model.mode==='calibrate'?'Calibración: marca dos puntos separados al menos 10 píxeles y escribe su distancia real.':model.mode==='ruler'?'Regla: marca dos puntos. La distancia se calcula sobre el plano.':'Herramienta desactivada.');drawOverlay();}
 $('areaToggle').onclick=()=>tool('area');$('closeArea').onclick=()=>{if(model.points.length<3){message('Marca al menos tres vértices para cerrar el contorno.',true);return;}if(!isSimplePolygon(model.points)){message('El contorno tiene cruces, puntos duplicados o superficie nula. Define un perímetro simple.',true);return;}model.boundary=model.points.map(p=>[...p]);model.points=[];model.mode=null;$('closeArea').hidden=true;$('areaToggle').setAttribute('aria-pressed','false');$('boardFrame').classList.remove('measuring');updateMetrics();refreshThree();message('Superficie y perímetro calculados sobre el contorno definido.');};
 $('flowCalibrate').onclick=()=>tool('calibrate');$('rulerToggle').onclick=()=>tool('ruler');
 $('clearMeasurements').onclick=()=>{model.measurements=[];model.boundary=[];model.points=[];updateMetrics();refreshThree();$('rulerResult').textContent='Selecciona la regla y marca dos puntos.';};
 overlay.onclick=e=>{
+  if(model.busy)return;if(discipline.handleClick(e))return;
   if(!model.asset||!model.mode||model.busy||model.panEnabled)return;const p=pointOnCanvas(e,overlay);model.points.push(p);drawOverlay();if(model.mode==='area')return;
   if(model.points.length===2){if(distance(...model.points)<10){model.points=[];message('Separa los puntos al menos 10 píxeles.',true);return;}
-    if(model.mode==='calibrate'){$('flowDistanceDialog').showModal();$('flowDistance').focus();}else{model.measurements.push(model.points.map(p=>[...p]));model.points=[];updateMetrics();refreshThree();}}
+    if(model.mode==='calibrate'){$('flowDistanceDialog').showModal();$('flowDistanceLabel').textContent=discipline.active&&discipline.calibrationUnit==='mm'?'Distancia en milímetros':'Distancia en metros';$('flowDistance').focus();}else{model.measurements.push(model.points.map(p=>[...p]));model.points=[];updateMetrics();refreshThree();}}
 };
 $('flowDistanceForm').onsubmit=e=>{
-  e.preventDefault();try{model.calibration=createCalibration({imageSha256:model.asset.identity,width:clean.width,height:clean.height,points:model.points,distanceMeters:Number($('flowDistance').value)});try{localStorage.setItem(`prodalam.scale.${model.asset.identity}`,JSON.stringify(model.calibration));}catch{}if(model.processed){applySharedScale();generateRender();}model.points=[];model.mode=null;$('boardFrame').classList.remove('measuring');$('flowDistanceDialog').close();updateMetrics();refreshThree();message('Escala aplicada al plano, al render y al modelo 3D.');}catch(error){message(error.message,true);}
+  e.preventDefault();try{model.calibration=createCalibration({imageSha256:model.asset.identity,width:clean.width,height:clean.height,points:model.points,distanceMeters:Number($('flowDistance').value)/(discipline.active&&discipline.calibrationUnit==='mm'?1000:1)});try{localStorage.setItem(`prodalam.scale.${model.asset.identity}`,JSON.stringify(model.calibration));}catch{}if(model.processed){applySharedScale();generateRender();}model.points=[];model.mode=null;$('boardFrame').classList.remove('measuring');$('flowDistanceDialog').close();updateMetrics();refreshThree();message('Escala aplicada al plano, al render y al modelo 3D.');}catch(error){message(error.message,true);}
 };
 const cancelScale=()=>{model.points=[];model.mode=null;$('flowDistanceDialog').close();$('boardFrame').classList.remove('measuring');drawOverlay();};$('cancelFlowDistance').onclick=cancelScale;$('flowDistanceDialog').addEventListener('cancel',cancelScale);
-function applySharedScale(){if(model.calibration){const s=bridge.snapshot();bridge.applyCalibration({...model.calibration,imageSha256:s.imageSha256,width:s.result.width,height:s.result.height});}}
+function applySharedScale(){if(discipline.active)return;if(model.calibration){const s=bridge.snapshot();bridge.applyCalibration({...model.calibration,imageSha256:s.imageSha256,width:s.result.width,height:s.result.height});}}
 $('processVectors').onclick=async()=>{
-  if(model.busy||!model.asset)return;setBusy(true);message('Extrayendo contornos y preparando el render cenital…');await nextPaint();
+  if(discipline.active){await processDiscipline();return;}
+  if(model.busy||!model.asset)return;try{discipline.assertInterior();}catch(error){message(error.message,true);return;}model.processed=false;model.processedHash=null;setBusy(true);message('Extrayendo contornos y preparando el render cenital…');await nextPaint();
   try{
     const unchanged=model.asset.kind==='image'&&!$('grayscale').checked&&!$('invertContrast').checked&&!$('paperCleanup').checked;
     const blob=unchanged?model.asset.file:await blobFromCanvas(clean),url=URL.createObjectURL(blob),previousToken=bridge.snapshot().fileToken;
     try{await bridge.loadImage(url,model.asset.name,model.asset.sample&&unchanged);}finally{URL.revokeObjectURL(url);}
     if(model.asset.kind==='dxf')bridge.importVectorGeometry(cadWallGeometry(model.asset.mappedPaths,clean.width,clean.height,Math.max(2,Number($('vectorWidth').value))));
     let snap=bridge.snapshot();if(snap.prediction&&snap.rawPrediction?.provenance?.execution==='live'){const refined=refineStructure(snap.prediction,snap.baseline);if(refined!==snap.prediction){bridge.importAnalysis(refined);snap=bridge.snapshot();}}if(snap.fileToken===previousToken||!snap.result)throw new Error('El motor no devolvió una geometría válida.');
+    discipline.assertInterior(snap);
     model.vectors=structuredClone(bridge.architecture());model.bounds=geometryBounds(model.vectors);
     if(!model.bounds)throw new Error('No se detectó estructura en esta lámina. Revisa contraste y orientación antes de continuar.');
     if(!model.calibration&&snap.calibration)model.calibration={...snap.calibration,imageSha256:model.asset.identity};
@@ -247,8 +262,22 @@ $('processVectors').onclick=async()=>{
     updateAnalysisQuality(snap);
     $('extractionStatus').textContent=`Paso 1 listo · ${model.vectors.wallPolygons?.length??0} regiones de muro. Puedes activar la capa vectorial para revisar y continuar al Paso 2.`;
     message(model.presentation?'Plano procesado. El diseño fotorrealista vinculado está conservado y listo para comparar en el Paso 2.':'Vectores extraídos. La lámina limpia está lista para el Paso 2. Activa la capa vectorial si quieres revisar los contornos.');
-  }catch(error){message(error.message,true);}finally{setBusy(false);}
+  }catch(error){message(error.message,true);}finally{setBusy(false);if(!model.processed){$('analysisQuality').hidden=true;setStep(1);}}
 };
+function configureDisciplineUI(){document.body.dataset.drawingDomain=discipline.domain;if(discipline.active)$('finishPrompt').value=discipline.domain==='exterior'?'Fachada sobria, revestimiento claro, perfilería oscura y vidrio azul grisáceo. Conserva el alzado y sus aberturas.':discipline.domain==='mechanical'?'Acero satinado, iluminación de estudio y proporciones de la pieza original. Conserva los cortes y componentes representados.':'Perfiles de acero, conexiones según el dibujo y fondo neutro. Conserva los ejes y apoyos representados.';else $('finishPrompt').value=FINISH_PRESETS[$('finishPreset').value].prompt;}
+function updateDisciplineMetrics(){
+  const size=discipline.result?.size,provisional=!discipline.scaleKnown,values=size?[distanceLabel(size[0]),distanceLabel(size[1]),distanceLabel(size[2]),String(discipline.result.parts)]:['—','—','—','—'];
+  for(const[id,label,i]of [['metricLength','ANCHO / LONGITUD',0],['metricWidth','ALTO / DIÁMETRO',1],['metricPerimeter','FONDO',2],['metricArea',discipline.domain==='structure'?'BARRAS':'VOLÚMENES',3]]){$(id).previousElementSibling.textContent=label;$(id).textContent=(size&&provisional&&i<3?'≈ ':'')+values[i];}
+  $('flowScaleStatus').textContent=discipline.scaleKnown?`${discipline.scaleLabel} · ${fmt(scale()*1000,3)} mm / píxel`:'Escala provisional · longitud configurada por el usuario';$('metricNote').textContent=discipline.result?.assumptions.join(' ')??'Define la región, revisa el perfil y procesa el modelo especializado. No se calculan resistencia ni capacidades de carga.';
+  if(model.measurements.length){const m=model.measurements.at(-1);$('rulerResult').textContent=`${provisional?'Provisional · ':''}${distanceLabel(distance(...m,scale()))} · ${model.measurements.length} medición(es)`;}
+}
+function installDisciplineResult(output){if(!output)return;model.render=output.canvas;model.vectors=output.vectors;model.bounds=output.bounds;model.processed=true;model.processedHash=model.asset.identity;model.renderRecord={...createRenderRecord({sourceHash:model.processedHash,width:clean.width,height:clean.height,kind:'technical',nativeWidth:output.canvas.width,nativeHeight:output.canvas.height}),domain:discipline.domain,geometryValidated:false,assumptions:output.result.assumptions};$('analysisQuality').hidden=false;$('analysisQuality').textContent=output.result.assumptions.join(' ');$('extractionStatus').textContent='Modelo especializado preparado · revisa su geometría y sus parámetros.';$('proceedStep2').innerHTML='Continuar al Paso 2 <span>→</span>';drawBoard();updateMetrics();updatePresentationLabel();}
+async function processDiscipline(){const returnStep=model.step;if(model.busy||!model.asset)return;if(discipline.pending){message('Cierra o cancela el trazo pendiente antes de procesar.',true);return;}setBusy(true);message('Extrayendo geometría para la disciplina seleccionada…');await nextPaint();try{installDisciplineResult(discipline.process(true));await restoreProjectPresentation();setBusy(false);setStep(returnStep===3?3:1);message('Modelo especializado listo. Revisa los perfiles y continúa al Paso 2.');}catch(error){message(error.message,true);}finally{setBusy(false);}}
+function handleDisciplineChange(reason){
+  document.body.dataset.drawingDomain=discipline.domain;if(reason==='overlay'){drawOverlay();return;}if(reason==='routing'){if(discipline.routingBlocked){model.processed=false;model.render=null;model.vectors=null;setStep(1);}setBusy(model.busy);return;}
+  if(reason==='domain'){configureDisciplineUI();appearance.restore();appearanceApplied=false;model.mode=null;model.points=[];resetPresentation();model.processed=false;model.render=null;model.bounds=null;model.vectors=null;model.version++;$('measureUnit').value=discipline.active?discipline.calibrationUnit:'m';setStep(1);updateMetrics();setBusy(false);message('Disciplina seleccionada. Procesa la lámina con su herramienta específica.');return;}
+  if(reason==='process'){processDiscipline();return;}if(model.processed&&discipline.active){try{installDisciplineResult(discipline.process(reason==='extract'));setBusy(false);}catch(error){message(error.message,true);}}else{drawOverlay();updateMetrics();}
+}
 function updateAnalysisQuality(snapshot){
   const quality=summarizeAnalysis(snapshot,Number($('confidence').value));
   $('analysisQuality').hidden=false;$('analysisQuality').classList.toggle('is-limited',quality.limited);$('analysisQuality').textContent=quality.message;
@@ -256,6 +285,7 @@ function updateAnalysisQuality(snapshot){
 }
 
 function generateRender(){
+  if(discipline.active){installDisciplineResult(discipline.process(false));return;}
   appearance.restore();appearanceApplied=false;
   const ctx=bridge.context(),{scene,model:sourceModel}=ctx,s=bridge.snapshot();if(!sourceModel)throw new Error('El visor WebGL no está disponible para generar el render.');
   if(!topRenderer){topRenderer=new THREE.WebGLRenderer({antialias:true,alpha:false,preserveDrawingBuffer:true});topRenderer.setPixelRatio(1);topRenderer.shadowMap.enabled=true;topRenderer.shadowMap.type=THREE.PCFSoftShadowMap;topRenderer.outputColorSpace=THREE.SRGBColorSpace;topRenderer.toneMapping=THREE.ACESFilmicToneMapping;}
@@ -288,7 +318,7 @@ function attachTexture(){
   const texture=new THREE.CanvasTexture(model.render);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=4;
   planMesh.material.map?.dispose();planMesh.material.map=texture;planMesh.material.needsUpdate=true;textureModel=current;
 }
-$('advance3d').onclick=()=>{if(!model.processed||bridge.snapshot().imageSha256!==model.processedHash){message('El plano cambió. Vuelve a procesarlo para sincronizar el modelo.',true);return;}attachTexture();setStep(3);};
+$('advance3d').onclick=()=>{if(discipline.active){if(model.processed)setStep(3);return;}if(!model.processed||bridge.snapshot().imageSha256!==model.processedHash){message('El plano cambió. Vuelve a procesarlo para sincronizar el modelo.',true);return;}attachTexture();setStep(3);};
 const toolbar=document.createElement('div');toolbar.className='three-measure-tools';toolbar.innerHTML='<button id="threeRuler" aria-pressed="false">↔ Medir en 3D</button><button id="threeDimensions" aria-pressed="false">⌗ Cotas</button><output id="threeDistance">Medición sobre el plano horizontal · m</output>';$('viewer').append(toolbar);
 $('threeDimensions').onclick=()=>{$('dimensionToggle').checked=!$('dimensionToggle').checked;$('threeDimensions').setAttribute('aria-pressed',String($('dimensionToggle').checked));refreshThree();};
 $('threeRuler').onclick=()=>{model.threeRuler=!model.threeRuler;model.points=[];$('threeRuler').setAttribute('aria-pressed',String(model.threeRuler));const {controls,renderer}=bridge.context();if(controls)controls.enabled=!model.threeRuler;if(renderer)renderer.domElement.style.cursor=model.threeRuler?'crosshair':'';$('threeDistance').textContent=model.threeRuler?'Marca dos puntos · Proyección en el plano horizontal':'Medición sobre el plano horizontal · m';};
@@ -301,6 +331,7 @@ initialRenderer?.domElement.addEventListener('pointerdown',e=>{
 },true);
 function disposeOverlay(){for(const child of [...extensionGroup.children]){child.geometry?.dispose();child.material?.map?.dispose();child.material?.dispose();extensionGroup.remove(child);}}
 function refreshThree(){
+  if(discipline.active){extensionGroup.visible=false;return;}
   const {scene}=bridge.context(),s=bridge.snapshot();if(!scene||!s.result)return;disposeOverlay();if(!extensionGroup.parent)scene.add(extensionGroup);extensionGroup.visible=s.view==='3d';
   const same=model.processedHash===s.imageSha256,b=geometryBounds(bridge.architecture()),scale3=s.metersPerPixel;
   const draw=(a,b,text)=>{
@@ -340,38 +371,42 @@ function resetPresentation(){
 }
 function drawPresentation(){
   const selected=$('renderSource').value==='presentation'?model.presentation?.canvas:null;
-  const source=selected??model.render;if(!source)return;const density=Math.min(3,3072/Math.max(clean.width,clean.height)),width=Math.round(clean.width*density),height=Math.round(clean.height*density);if(render.width!==width||render.height!==height){render.width=width;render.height=height;}const target=render.getContext('2d');render.setAttribute('aria-label',selected?'Diseño fotorrealista vinculado al plano':'Render cenital local');
+  const source=selected??model.render;if(!source)return;const density=Math.min(3,3072/Math.max(clean.width,clean.height)),width=Math.round(clean.width*density),height=Math.round(clean.height*density);if(render.width!==width||render.height!==height){render.width=width;render.height=height;}const target=render.getContext('2d');render.setAttribute('aria-label',selected?'Diseño fotorrealista vinculado al plano':discipline.active?'Vista técnica procesada':'Render cenital local');
   target.clearRect(0,0,render.width,render.height);target.fillStyle='#f5f4ef';target.fillRect(0,0,render.width,render.height);
   const size=fitImageSize(source.width,source.height,render.width,render.height);
   target.drawImage(source,(render.width-size.width)/2,(render.height-size.height)/2,size.width,size.height);
 }
 function updatePresentationLabel(){
+  if(discipline.active&&$('renderSource').value!=='presentation'){$('renderBadge').textContent=discipline.domain==='exterior'?'PROYECCIÓN DE FACHADA · REVISAR':'PROYECCIÓN MECÁNICA / ESTRUCTURAL';$('renderProvenance').textContent='Proyección renderizada del mismo modelo del Paso 3, alineada con la lámina. Revisa la escala, los perfiles y las dimensiones asumidas.';return;}
   const p=$('renderSource').value==='presentation'?model.presentation:null;
   $('renderBadge').textContent=p?(p.record.kind==='linked'?'DISEÑO VINCULADO · v2.3':p.record.kind==='generated'?'OPENAI · POR REVISAR':'RENDER IMPORTADO · POR REVISAR'):'RENDER LOCAL · PASO 2';
+  if(p?.record.kind==='generated'&&!cgiConfigured)$('cgiStatus').textContent='Este proyecto tiene una propuesta IA guardada. Para generar otra, conecta tu proveedor de IA o importa un nuevo diseño.';
   $('renderProvenance').textContent=p?`${p.record.kind==='linked'?'Referencia aprobada de v2.3':p.record.kind==='generated'?'Generado con OpenAI':'Imagen importada'} · ${p.record.nativeWidth} × ${p.record.nativeHeight} px. Diseño vinculado al plano; revisa su correspondencia con la cortina.`:'Render local de los elementos reconocidos, con acabados de catálogo. La generación fotorrealista es una función distinta.';
 }
 async function installPresentation(image,kind,details={},persist=true){
   const canvas=document.createElement('canvas');canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;canvas.getContext('2d').drawImage(image,0,0);
-  const record=createRenderRecord({sourceHash:model.processedHash,width:clean.width,height:clean.height,nativeWidth:canvas.width,nativeHeight:canvas.height,kind,...details});record.designName=details.designName??null;record.imageBounds=details.imageBounds??null;
+  const record=createRenderRecord({sourceHash:model.processedHash,width:clean.width,height:clean.height,nativeWidth:canvas.width,nativeHeight:canvas.height,kind,...details});record.domain=discipline.domain;record.designName=details.designName??null;record.imageBounds=details.imageBounds??null;
   const sample=document.createElement('canvas'),fit=fitImageSize(canvas.width,canvas.height,768,768);sample.width=Math.round(fit.width);sample.height=Math.round(fit.height);sample.getContext('2d').drawImage(canvas,0,0,sample.width,sample.height);
   appearanceOptions.registration=details.registration??(record.imageBounds?registrationFromBounds(canvas,{width:clean.width,height:clean.height},model.bounds,record.imageBounds):estimateReferenceRegistration(sample.getContext('2d').getImageData(0,0,sample.width,sample.height),{width:clean.width,height:clean.height},model.bounds));updateAlignmentInputs();
-  model.presentation={canvas,record};$('renderSource').querySelector('[value="presentation"]').disabled=false;$('renderSource').value='presentation';drawPresentation();updatePresentationLabel();
-  if(persist)try{await presentationStore.put(model.asset.identity,clean.width,clean.height,{blob:await blobFromCanvas(canvas),kind,designName:record.designName,imageBounds:record.imageBounds,provider:record.provider,model:record.model,registration:appearanceOptions.registration});}catch{$('renderProvenance').textContent+=' Disponible en esta sesión; el navegador no permitió guardarlo.';}
+  model.presentation={canvas,record};if(discipline.active&&model.processed)installDisciplineResult(discipline.process(false));$('renderSource').querySelector('[value="presentation"]').disabled=false;$('renderSource').value='presentation';drawPresentation();updatePresentationLabel();
+  if(persist)try{await presentationStore.put(model.asset.identity,clean.width,clean.height,{blob:await blobFromCanvas(canvas),kind,domain:discipline.domain,designName:record.designName,imageBounds:record.imageBounds,provider:record.provider,model:record.model,registration:appearanceOptions.registration},discipline.domain);}catch{$('renderProvenance').textContent+=' Disponible en esta sesión; el navegador no permitió guardarlo.';}
 }
 async function restoreProjectPresentation(){
   const identity=model.asset.identity,version=model.version,width=clean.width,height=clean.height;
-  let saved;try{saved=await presentationStore.get(identity,width,height);}catch{}
-  if(canRestorePresentation(saved,identity,width,height)){
+  let saved;try{saved=await presentationStore.get(identity,width,height,discipline.domain);}catch{}
+  if((saved?.domain??'interior')===discipline.domain&&canRestorePresentation(saved,identity,width,height)){
     try{const image=await decodeImage(saved.blob);if(model.version===version&&model.asset.identity===identity){await installPresentation(image,saved.kind,{designName:saved.designName,provider:saved.provider,model:saved.model,imageBounds:saved.imageBounds??(saved.kind==='linked'?REFERENCE_PROJECTS[identity]?.imageBounds:null),registration:saved.kind==='linked'&&!saved.imageBounds?undefined:saved.registration},saved.kind==='linked'&&!saved.imageBounds);return true;}}catch{}
   }
-  const linked=REFERENCE_PROJECTS[identity];if(!linked)return false;
+  const generated=discipline.domain==='exterior'?GENERATED_EXTERIOR_PROJECTS[identity]:null;
+  if(generated){try{const response=await fetch(generated.url);if(response.ok){const image=await decodeImage(await response.blob());if(model.version===version&&model.asset.identity===identity){await installPresentation(image,'generated',{designName:generated.name,provider:generated.provider,model:generated.model});return true;}}}catch{}}
+  const linked=discipline.active?null:REFERENCE_PROJECTS[identity];if(!linked)return false;
   try{const response=await fetch(linked.url);if(!response.ok)return false;const image=await decodeImage(await response.blob());if(model.version!==version||model.asset.identity!==identity)return false;await installPresentation(image,'linked',{designName:linked.name,imageBounds:linked.imageBounds});return true;}catch{return false;}
 }
 $('renderSource').onchange=()=>{drawPresentation();updatePresentationLabel();};
 $('finishPrompt').value=FINISH_PRESETS.oak.prompt;
 $('finishPreset').onchange=()=>{$('finishPrompt').value=FINISH_PRESETS[$('finishPreset').value].prompt;if(model.processed){generateRender();drawPresentation();}};
 async function checkCGIStatus(){
-  try{const response=await fetch('./api/cgi/status');const status=await response.json();cgiConfigured=response.ok&&status.ready===true;$('cgiStatus').textContent=cgiConfigured?`OpenAI disponible · ${status.model}`:'OpenAI sin configurar · agrega tu clave API en .env y reinicia el servidor. Puedes usar el render técnico o importar una imagen.';}catch{cgiConfigured=false;$('cgiStatus').textContent='Generación IA no disponible en este servidor. Usa el render local o importa un render existente.';}
+  try{const response=await fetch('./api/cgi/status');const status=await response.json();cgiConfigured=response.ok&&status.ready===true;$('cgiStatus').textContent=cgiConfigured?`OpenAI disponible · ${status.model}`:'Generación IA sin conectar. Para crear nuevas propuestas, conecta tu proveedor de IA o importa una imagen generada.';}catch{cgiConfigured=false;$('cgiStatus').textContent='Generación IA no disponible en este servidor. Usa el render local o importa un render existente.';}
   setBusy(model.busy);
 }
 $('generateCGI').onclick=async()=>{
@@ -379,7 +414,7 @@ $('generateCGI').onclick=async()=>{
   const hash=model.processedHash,version=model.version;setBusy(true);cgiAbort=new AbortController();$('renderBusy').hidden=false;$('cancelCGI').hidden=false;
   message('Generando una presentación fotorrealista con OpenAI. El render actual se conserva durante la espera.');
   try{
-    const response=await fetch('./api/cgi/render',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sourceHash:hash,width:clean.width,height:clean.height,imageDataUrl:clean.toDataURL('image/png'),preset:$('finishPreset').value,stylePrompt:$('finishPrompt').value}),signal:cgiAbort.signal});
+    const response=await fetch('./api/cgi/render',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sourceHash:hash,width:clean.width,height:clean.height,imageDataUrl:clean.toDataURL('image/png'),domain:discipline.domain,preset:$('finishPreset').value,stylePrompt:$('finishPrompt').value}),signal:cgiAbort.signal});
     const data=await response.json();if(!response.ok)throw new Error(data.error??'No se pudo generar la imagen.');
     if(model.version!==version||model.processedHash!==hash||data.sourceHash!==hash)throw new Error('La respuesta corresponde a otra versión del plano. No se ha aplicado.');
     if(typeof data.imageDataUrl!=='string'||!data.imageDataUrl.startsWith('data:image/png;base64,'))throw new Error('El proveedor no devolvió una imagen compatible.');
@@ -416,6 +451,7 @@ function resetAppearanceOptions(){appearanceOptions.mode='ambient';appearanceOpt
 function updateAlignmentInputs(){const r=appearanceOptions.registration;for(const [id,value]of [['appearanceOffsetX',r.offsetX],['appearanceOffsetY',r.offsetY],['appearanceScale',r.zoom]])$(id).value=value;$('appearanceXValue').value=`${fmt(r.offsetX,1)} %`;$('appearanceYValue').value=`${fmt(r.offsetY,1)} %`;$('appearanceScaleValue').value=`${Math.round(r.zoom*100)} %`;}
 function resetAlignmentInputs(){appearanceOptions.registration={offsetX:0,offsetY:0,zoom:1};updateAlignmentInputs();}
 function syncAppearance(force=false){
+  if(discipline.active)return;
   if(model.step!==3){if(appearanceApplied){appearance.restore();appearanceApplied=false;}appearanceBadge.hidden=true;return;}
   if(!force)return;
   const ambient=appearanceOptions.mode==='ambient';for(const [id,selected]of [['ambientMode',ambient],['technicalMode',!ambient]])$(id).setAttribute('aria-pressed',String(selected));
@@ -437,20 +473,22 @@ $('referenceTextures').onchange=()=>{appearanceOptions.referenceTextures=$('refe
 $('appearanceReference').onchange=()=>{appearanceOptions.reference=$('appearanceReference').checked;syncAppearance(true);};
 for(const [id,key,output,multiplier]of [['appearanceOffsetX','offsetX','appearanceXValue',1],['appearanceOffsetY','offsetY','appearanceYValue',1],['appearanceScale','zoom','appearanceScaleValue',100]])$(id).oninput=()=>{appearanceOptions.registration[key]=Number($(id).value);$(output).value=`${Math.round(Number($(id).value)*multiplier*10)/10} %`;clearTimeout(appearanceTimer);appearanceTimer=setTimeout(()=>{syncAppearance(true);persistRegistration();},150);};
 $('resetAppearanceAlignment').onclick=()=>{appearanceOptions.registration=model.presentation?.record.imageBounds?registrationFromBounds(model.presentation.canvas,{width:clean.width,height:clean.height},model.bounds,model.presentation.record.imageBounds):appearancePixels?estimateReferenceRegistration(appearancePixels,{width:clean.width,height:clean.height},model.bounds):{offsetX:0,offsetY:0,zoom:1};updateAlignmentInputs();syncAppearance(true);persistRegistration();};
-async function persistRegistration(){if(!model.presentation||!model.asset)return;try{const saved=await presentationStore.get(model.asset.identity,clean.width,clean.height);if(saved)await presentationStore.put(model.asset.identity,clean.width,clean.height,{...saved,registration:{...appearanceOptions.registration}});}catch{}}
+async function persistRegistration(){if(!model.presentation||!model.asset)return;try{const saved=await presentationStore.get(model.asset.identity,clean.width,clean.height,discipline.domain);if(saved)await presentationStore.put(model.asset.identity,clean.width,clean.height,{...saved,registration:{...appearanceOptions.registration}},discipline.domain);}catch{}}
 $('tab3d').addEventListener('click',()=>{appearanceBadge.hidden=appearanceOptions.mode!=='ambient';});for(const id of ['tab2d','tabEval'])$(id).addEventListener('click',()=>appearanceBadge.hidden=true);
 
 // Observe replacement of the existing model without intercepting its internal logic.
-function observeViewer(){const {model:current}=bridge.context();const snap=bridge.snapshot();if(model.processed&&snap.imageSha256===model.processedHash&&snap.calibration!==lastCalibration){lastCalibration=snap.calibration;model.calibration=snap.calibration?{...snap.calibration,imageSha256:model.asset.identity}:null;updateMetrics();}
+function observeViewer(){if(discipline.active){extensionGroup.visible=false;toolbar.hidden=true;frameId=requestAnimationFrame(observeViewer);return;}const {model:current}=bridge.context();const snap=bridge.snapshot();if(model.processed&&snap.imageSha256===model.processedHash&&snap.calibration!==lastCalibration){lastCalibration=snap.calibration;model.calibration=snap.calibration?{...snap.calibration,imageSha256:model.asset.identity}:null;updateMetrics();}
 if(current!==last3DModel){last3DModel=current;attachTexture();refreshThree();syncAppearance(true);}extensionGroup.visible=model.step===3&&bridge.snapshot().view==='3d';toolbar.hidden=bridge.snapshot().view!=='3d';frameId=requestAnimationFrame(observeViewer);}
 observeViewer();
-window.addEventListener('pagehide',()=>{appearance.restore();cancelAnimationFrame(frameId);disposeOverlay();topRenderer?.dispose();});
+window.addEventListener('pagehide',()=>{discipline.dispose();appearance.restore();cancelAnimationFrame(frameId);disposeOverlay();topRenderer?.dispose();});
 async function loadSample(){
   if(model.busy)return;
   setBusy(true);
   try{const sampleBlob=await (await fetch(SAMPLE.imageUrl)).blob();const sample={name:'plano.jpeg',kind:'image',file:new File([sampleBlob],'plano.jpeg',{type:'image/jpeg'}),sample:true,page:1};model.queue.push(sample);setBusy(false);await selectAsset(sample);}
   catch(error){setBusy(false);message(`No se pudo cargar el ejemplo: ${error.message}`,true);}
 }
+async function loadDisciplineExample(name,domain){if(model.busy)return;setBusy(true);try{const response=await fetch('./assets/examples/'+name);if(!response.ok)throw new Error('No se pudo abrir el ejemplo.');const blob=await response.blob();setBusy(false);await addFiles([new File([blob],name,{type:'image/jpeg'})]);$('drawingDiscipline').value=domain;$('drawingDiscipline').dispatchEvent(new Event('change'));}catch(error){message(error.message,true);}finally{setBusy(false);}}
+$('loadExteriorExample').onclick=()=>loadDisciplineExample('fachada.jpeg','exterior');$('loadMechanicalExample').onclick=()=>loadDisciplineExample('mecanica.jpeg','mechanical');
 $('loadExample').onclick=loadSample;
 $('proceedStep2').onclick=()=>{setStep(2);updatePresentationLabel();};
 $('downloadClean').onclick=async()=>{if(model.asset)save(await blobFromCanvas(clean),'prodalam-plano-limpio.png');};

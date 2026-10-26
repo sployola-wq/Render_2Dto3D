@@ -1,10 +1,16 @@
+import { assertDiscipline } from '../dist/discipline-analysis.js';
 import { FINISH_PRESETS } from '../dist/blueprint-preprocess.js';
 
 export class CGIError extends Error {
   constructor(status,code,message){super(message);this.status=status;this.code=code;}
 }
-export function renderPrompt({preset='oak',stylePrompt=''}) {
+export function renderPrompt({preset='oak',stylePrompt='',domain='interior'}) {
   if(typeof stylePrompt!=='string'||stylePrompt.length>2000)throw new CGIError(400,'INVALID_STYLE','Las instrucciones de acabado deben tener hasta 2.000 caracteres.');
+  try{assertDiscipline(domain);}catch{throw new CGIError(400,'INVALID_DISCIPLINE','Selecciona una disciplina compatible.');}
+  if(domain!=='interior')return [
+    domain==='exterior'?'Create a realistic exterior architectural presentation from the supplied elevation or facade drawing. Preserve its projection, framing, silhouette, storey count, openings and visible facade details. Do not turn it into a floor plan or overhead cutaway.':domain==='mechanical'?'Create a technical mechanical product illustration from the supplied engineering drawing. Preserve its shaft axes, silhouette, proportions, visible bores and depicted components. When the input shows a section, render an open longitudinal cutaway retaining the depicted internal cavities, bearings, walls and section faces. Do not replace an internal section with a closed exterior shell. Distinguish unsectioned shafts from voids according to the drawing convention. Never interpret cross-hatching or callout lines as walls, rooms or furniture.':'Create a structural engineering visualization from the supplied frame drawing. Preserve member axes, connectivity and projection. Do not turn auxiliary dimension lines into members or invent connections.',
+    'The output is a visual proposal, not validated CAD or an inference of hidden geometry. Do not invent dimensions, cavities, supports or unseen features. No decorative furniture, labels or watermark.',stylePrompt.trim()
+  ].filter(Boolean).join('\n');
   return [
     'Transform the supplied architectural floor-plan image into a photorealistic architectural overhead CGI presentation, looking exactly straight down at 90 degrees.',
     'Preserve the complete image framing, orientation, outline, room layout, wall positions, openings and proportions. Do not crop, rotate, move walls, invent rooms, add doors, duplicate furniture or infer dimensions. Keep empty spaces empty unless the plan clearly shows furniture.',

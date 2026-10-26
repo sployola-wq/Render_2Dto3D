@@ -1,0 +1,11 @@
+{
+  "kind": "generated",
+  "provider": "OpenAI",
+  "tool": "image_gen",
+  "sourceHash": "81331e9731e53cb39c46ec13616d3e519998f829a38610496a8332ced6a3641d",
+  "source": "fachada.jpeg",
+  "asset": "facade-ai-v28.png",
+  "geometryValidated": false,
+  "prompt": "Use case: sketch-to-render. Edit target: the provided exterior architectural perspective sketch. Create a polished photorealistic architectural CGI presentation of THIS EXACT two-storey contemporary house. Preserve the exact image composition, perspective, camera angle, complete outer silhouette, floor heights, all projecting flat roof slabs and canopy shapes, the setback upper storey, all columns and every door and window location and proportions. Do not invent, remove or relocate any building elements. Transform only the finishes and lighting: refined warm off-white mineral render walls, selective rich natural cedar siding on the upper feature wall and horizontal cladding bays, slim charcoal aluminum window frames, physically realistic slightly blue clear reflective glazing with subtle depth/interior curtains, believable concrete slab edges and soffits, warm restrained architectural lighting under the existing canopy, light gray porcelain paving immediately at the base. Clean near-white pale sky/background; keep the complete building fully visible, same generous white border as input, no landscaping or cars that obscure the exact facade. Professional high-end daylight archviz, realistic microtextures, contact shadows, crisp details, natural balanced color. Keep all original geometry and the same pixel-relative framing so this image can register over the drawing. No drawing lines, annotations, dimensions, numbers, labels, watermark, or logos. Deliver one full-frame image.",
+  "scope": "Visual proposal for this exact drawing; source geometry is separate. Other drawings require their own generated or imported presentation."
+}

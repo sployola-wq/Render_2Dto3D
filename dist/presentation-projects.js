@@ -9,5 +9,11 @@ export function createPresentationStore(indexedDB=globalThis.indexedDB){
   let pending;
   const open=()=>pending??=(new Promise((resolve,reject)=>{if(!indexedDB){reject(new Error('El navegador no ofrece almacenamiento de proyectos.'));return;}const req=indexedDB.open('prodalam-design-references',1);req.onupgradeneeded=()=>req.result.createObjectStore('presentations');req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);}));
   async function transact(mode,key,value){const db=await open();return new Promise((resolve,reject)=>{const tx=db.transaction('presentations',mode),store=tx.objectStore('presentations'),req=value===undefined?store.get(key):store.put(value,key);tx.oncomplete=()=>resolve(req.result);tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});}
-  return {get:(identity,w,h)=>transact('readonly',presentationKey(identity,w,h)),put:(identity,w,h,value)=>transact('readwrite',presentationKey(identity,w,h),{...value,assetIdentity:identity,width:w,height:h})};
+  const key=(identity,w,h,domain)=>{if(!['interior','exterior','mechanical','structure'].includes(domain))throw new Error('Disciplina no válida.');return (domain==='interior'?'':domain+':')+presentationKey(identity,w,h);};
+  return {get:(identity,w,h,domain='interior')=>transact('readonly',key(identity,w,h,domain)),put:(identity,w,h,value,domain='interior')=>transact('readwrite',key(identity,w,h,domain),{...value,assetIdentity:identity,width:w,height:h})};
 }
+
+/** AI artwork is paired only to its actual source, never by file name. */
+export const GENERATED_EXTERIOR_PROJECTS=Object.freeze({
+  '81331e9731e53cb39c46ec13616d3e519998f829a38610496a8332ced6a3641d':{url:'./assets/presentation/facade-ai-v28.png',name:'Propuesta de fachada IA · v2.8',provider:'OpenAI',model:'image_gen · Codex',domain:'exterior',geometryValidated:false}
+});

@@ -1,4 +1,4 @@
-# Prodalam Render Pro v2.5
+# Prodalam Render Pro v2.8
 
 Aplicación local de preparación de planos y reconstrucción 3D. Repositorio de esta entrega: [sployola-wq/Render_2Dto3D](https://github.com/sployola-wq/Render_2Dto3D).
 
@@ -7,6 +7,36 @@ npm start
 ```
 
 Abrir **http://127.0.0.1:4173**. Los recursos del navegador se incluyen en `dist/vendor`; la vista estática no requiere instalar dependencias para iniciar. Node.js 20 o superior.
+
+## Cambios v2.8 · Corte mecánico y fachada IA
+
+El modo mecánico comienza en **Corte longitudinal**: separa regiones de material, conserva espacios cerrados internos y construye medias revoluciones con caras de sección. Los trazos originales se proyectan únicamente sobre esas caras materiales. Hay alternativas de envolvente cerrada y núcleo como eje longitudinal sin seccionar. La comparación, el 3D y los vectores SVG comparten la interpretación del corte; JSON y STL conservan su geometría y unidades.
+
+Se generó con la herramienta de imágenes de OpenAI una propuesta para **la fachada exacta aportada** (SHA `81331e…3641d`). Queda vinculada por identidad, con procedencia `generated`, y se recupera al procesar nuevamente ese archivo. El modelo exterior toma de su presentación la fachada, la paleta, una muestra de revestimiento y reflejos de vidrio; no aplica esa imagen a otros proyectos. La geometría se mantiene independiente de la propuesta visual.
+
+**Otras fachadas necesitan su propia generación o importación.** El botón de generación por API está preparado para el proveedor configurado en el servidor; en este equipo no hay clave API configurada. La propuesta incluida se generó mediante la herramienta integrada de Codex, sin utilizar la API del servidor. No constituye un generador universal sin conexión. Imagen y prompt: [facade-ai-v28.png](dist/assets/presentation/facade-ai-v28.png), [procedencia y prompt](dist/assets/presentation/facade-ai-v28.json).
+
+Verificación: **104 pruebas Node y 4 Python**, corte real con cavidad central, cambio entre corte/envolvente, fachada IA recuperada tras recarga y regresión real del interior con 8 pisos texturados y 53 muebles. El núcleo interior de v2.5 permanece idéntico. Ver [reports/cortes-y-fachadas-11.md](reports/cortes-y-fachadas-11.md).
+
+## Cambios v2.7 · Interpretación antes del render
+
+El modo inicial es **Automático**: identifica la evidencia de una sección mecánica, un alzado o capas CAD estructurales antes de invocar el motor de interiores. Se migran los registros antiguos que habían guardado Interior como valor predeterminado. Una selección manual incompatible bloquea el procesamiento residencial salvo verificación expresa; las predicciones sin evidencia suficiente de aberturas y equipamiento tampoco habilitan el modelo residencial.
+
+El Paso 2 especializado ahora renderiza la **misma geometría** que se navega en el Paso 3, con cámara ortográfica alineada al marco original e iluminación de estudio. Los metales reciben reflejos de entorno generados localmente. Los DXF con una única capa estructural identificable la seleccionan sin incluir sus cotas. El flujo interior de v2.5 se conserva.
+
+Verificación: **95 pruebas Node y 4 Python**, carga normal de los JPEG mecánico/fachada del usuario y regresión real del interior (8 pisos con textura, 53 muebles ambientados), más un pórtico DXF de 7 barras. La envolvente mecánica no equivale a reconstruir el ensamblaje: las cavidades y piezas separadas requieren perfiles explícitos. Ver [reports/ruteo-10.md](reports/ruteo-10.md).
+
+## Cambios v2.6 · Exteriores e ingeniería
+
+Selecciona **Tipo de proyecto** al cargar la lámina. El flujo anterior de interiores se conserva. Los nuevos modos ejecutan análisis y visores independientes:
+
+- **Exterior / fachada:** silueta del alzado, paños candidatos con materiales editables y volumen por profundidad especificada. Una perspectiva aislada produce una aproximación volumétrica, no la reconstrucción de sus caras ocultas.
+- **Ingeniería / pieza:** revolución de envolvente simétrica, diámetro interior especificado, medias secciones trazadas y extrusión de perfiles con huecos. Las cavidades complejas y la separación de piezas requieren perfiles explícitos.
+- **Estructura / barras:** ejes raster propuestos o líneas DXF; secciones I y tubulares, edición de barras y pórticos duplicados por solicitud del usuario. Se pueden seleccionar capas DXF y usar sus unidades declaradas.
+
+Hay región de trabajo, trazado de perfiles, eje de revolución, comparación 2D, medición entre superficies 3D, sección visual y exportación JSON/STL (STL en mm). El JSON distingue píxeles de análisis, parámetros en mm y geometría en metros. Los estudios y referencias se separan por archivo y disciplina; se mantiene la clave histórica de los diseños interiores.
+
+Estos modos generan geometría de revisión: no son cálculos de resistencia, validación de fabricación ni conversión general de cualquier plano a un CAD exacto. La generación fotorrealista por API sigue siendo opcional. **88 pruebas Node + 4 Python aprobadas**, más revisión en navegador de los ejemplos, un pórtico DXF y el interior existente. Ver [reports/multidisciplina-09.md](reports/multidisciplina-09.md).
 
 ## Cambios v2.5 · Conservar el diseño y transferir sus acabados
 
