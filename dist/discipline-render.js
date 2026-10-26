@@ -13,8 +13,9 @@ export function alignedProjection(project,result){
   if(project.domain==='mechanical'&&project.params.operation==='revolve'){
     const horizontal=project.params.orientation==='horizontal',axis=project.axis??(horizontal?(b.y0+b.y1)/2:(b.x0+b.x1)/2),explicit=!!project.section||project.profiles?.some(p=>['cad','user-traced'].includes(p.source));
     const a=horizontal?b.x0:b.y0,z=horizontal?b.x1:b.y1,mid=explicit?(a+z)/2:(Math.ceil(a)+Math.floor(z)-1)/2;
-    if(horizontal){x=(d.width/2-mid)*mpp;y=result.size[1]/2+(axis-d.height/2)*mpp;}
-    else{x=(d.width/2-axis)*mpp;y=result.size[1]/2+(mid-d.height/2)*mpp;}
+    const lifted=explicit?result.group.position.y:result.size[1]/2;
+    if(horizontal){x=(d.width/2-mid)*mpp;y=lifted+(axis-d.height/2)*mpp;}
+    else{x=(d.width/2-axis)*mpp;y=lifted+(mid-d.height/2)*mpp;}
   }
   return {center:[x,y,0],width:d.width*mpp,height:d.height*mpp};
 }
@@ -28,6 +29,13 @@ export function createDisciplineRenderer(){
     const radius=Math.max(...result.size,.01),center=new THREE.Vector3(...p.center);let camera,ground;
     if(spatial){const bounds=new THREE.Box3().setFromObject(result.group),target=bounds.getCenter(new THREE.Vector3());camera=new THREE.PerspectiveCamera(35,project.drawing.width/project.drawing.height,radius/100,radius*100);const direction=new THREE.Vector3(1,.52,1.5).normalize();camera.position.copy(target).addScaledVector(direction,fittedDistance(bounds,direction,35,camera.aspect));camera.lookAt(target);key.position.set(-radius*1.6,radius*2.5,radius*2);key.castShadow=true;key.shadow.mapSize.set(2048,2048);Object.assign(key.shadow.camera,{left:-radius*1.3,right:radius*1.3,top:radius*1.3,bottom:-radius*1.3,near:.001,far:radius*12});key.shadow.camera.updateProjectionMatrix();key.shadow.normalBias=radius*.0001;ground=new THREE.Mesh(new THREE.PlaneGeometry(radius*100,radius*100),new THREE.MeshStandardMaterial({color:0xe8eae8,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-radius*.003;ground.receiveShadow=true;scene.add(ground);}
     else{camera=new THREE.OrthographicCamera(-p.width/2,p.width/2,p.height/2,-p.height/2,radius/1000,radius*30+1);camera.position.copy(center).add(new THREE.Vector3(0,0,radius*8+1));camera.lookAt(center);}camera.updateMatrixWorld();
+    if(project.domain==='mechanical'){
+      // Shadows within the open section reveal depth while the frontal camera
+      // retains every source coordinate. There is no ground plane in this view.
+      const target=new THREE.Box3().setFromObject(result.group).getCenter(new THREE.Vector3());
+      key.position.copy(target).add(new THREE.Vector3(-radius*1.6,radius*2.5,radius*3));key.target.position.copy(target);scene.add(key.target);
+      key.castShadow=true;key.shadow.mapSize.set(2048,2048);Object.assign(key.shadow.camera,{left:-radius*1.3,right:radius*1.3,top:radius*1.3,bottom:-radius*1.3,near:radius*.01,far:radius*12});key.shadow.camera.updateProjectionMatrix();key.shadow.normalBias=radius*.00015;key.shadow.bias=-.00005;
+    }
     const parent=result.group.parent;scene.add(result.group);const f=Math.min(3,2560/Math.max(project.drawing.width,project.drawing.height));renderer.setSize(Math.round(project.drawing.width*f),Math.round(project.drawing.height*f),false);
     try{renderer.render(scene,camera);const canvas=document.createElement('canvas');canvas.width=renderer.domElement.width;canvas.height=renderer.domElement.height;canvas.getContext('2d').drawImage(renderer.domElement,0,0);return canvas;}finally{result.group.removeFromParent();if(parent)parent.add(result.group);ground?.geometry.dispose();ground?.material.dispose();key.shadow.map?.dispose();key.dispose?.();fill.dispose?.();}
   },dispose(){skyEnvironment?.dispose();environment?.dispose();renderer?.dispose();renderer?.forceContextLoss();renderer=null;environment=null;}};

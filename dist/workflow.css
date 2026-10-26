@@ -54,3 +54,27 @@ body{background:var(--pro-bg);color:var(--pro-ink)}.app-header{height:80px;backg
 
 .discipline-design-status{padding:10px 12px;border-left:2px solid var(--pro-blue);background:var(--pro-soft);font-size:10px;line-height:1.7}.discipline-assumptions{margin:12px 0;color:var(--pro-muted);font-size:10px;line-height:1.7}.discipline-assumptions summary{cursor:pointer}.discipline-assumptions p{margin:10px 0}
 body[data-workflow-step="2"] .discipline-panel #disciplineFields{display:none}
+
+/* Keep the source and processed sheet at the same screen scale and position. */
+.comparator-controls{position:relative;min-height:60px;flex-shrink:0}
+#comparisonPlaceholder{display:none;margin:0;color:var(--pro-muted);font:9px monospace;letter-spacing:.5px}
+#comparisonPlaceholder span{margin-left:14px;letter-spacing:0;font:10px 'DM Sans',Arial,sans-serif}
+body[data-workflow-step="1"] #comparatorControls>:not(#comparisonPlaceholder){visibility:hidden}
+body[data-workflow-step="1"] #comparisonPlaceholder{display:block;position:absolute;left:24px;right:24px}
+.curtain-line{width:3px}
+.curtain-line:before{content:'';position:absolute;inset:0 -12px}
+.board-badge{top:-18px;max-width:48%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:12px}
+.render-badge{text-align:right}
+@media(max-width:760px){.comparator-controls{flex-wrap:wrap;gap:8px}.compare-tabs{flex-basis:100%}#comparisonPlaceholder span{display:block;margin:6px 0 0}}
+
+.mechanical-details{padding:10px 11px;margin-top:14px;border:1px solid var(--pro-line);border-radius:5px;background:var(--pro-soft)}
+.mechanical-details .flow-check{margin:0;gap:10px}.mechanical-details .flow-check span{font-size:10px}
+.mechanical-details .flow-hint{margin-top:8px;font-size:9px}
+
+/* v3.0 — Component inspection and a visible version badge in narrow panels. */
+.brand-version{font:11px monospace;color:var(--pro-accent);padding:4px 6px;border:1px solid var(--pro-line);border-radius:4px;white-space:nowrap}
+.assembly-components{padding:0 20px 20px;border-bottom:1px solid var(--pro-line)}.assembly-components>span{display:block;font:8px monospace;letter-spacing:1px;color:var(--pro-muted);margin-bottom:10px}
+#assemblyComponentButtons{display:flex;flex-wrap:wrap;gap:5px}#assemblyComponentButtons button{border:1px solid var(--pro-line);border-radius:4px;background:var(--pro-soft);color:var(--pro-ink);font-size:10px;padding:7px 9px;text-align:left}
+#disciplineExplode[aria-pressed=true]{border-color:var(--pro-blue);background:var(--pro-soft);color:var(--pro-blue)}
+
+@media(max-width:1150px){.header-project{display:none}.app-header{gap:12px}}

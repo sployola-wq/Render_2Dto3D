@@ -1,5 +1,6 @@
 import {drawingMask, morphology, connectedRegions, traceContour, validateClosedProfile} from './discipline-analysis.js';
 import {boundsOf} from './technical-geometry.js';
+import {detectMechanicalFeatures} from './mechanical-features.js';
 /** Recover the material shown by section hatching. Large closed white regions
  * remain voids; unlike silhouette filling, this never fills every enclosure. */
 export function extractMechanicalSection(image,drawing,{axis=null,orientation='horizontal',core='void',threshold=205}={}){
@@ -25,7 +26,7 @@ export function extractMechanicalSection(image,drawing,{axis=null,orientation='h
   // Only a round enclosed feature paired across the axis qualifies as an observed
   // rolling element. This excludes leader numerals and most hatch fragments.
   const paired=balls.filter(a=>balls.some(c=>c!==a&&Math.abs((horizontal?a.center[0]-c.center[0]:a.center[1]-c.center[1]))<2.5*pixelScale&&Math.abs((horizontal?a.center[1]+c.center[1]:a.center[0]+c.center[0])-2*center)<7*pixelScale&&Math.abs(a.radius-c.radius)<2*pixelScale));
-  return {profiles,balls:paired,voids,axis:center,orientation,core,materialMask:solid,assumptions:['Corte reconstruido desde regiones rayadas y contornos cerrados de la lámina.',core==='shaft'?'Núcleo longitudinal interpretado como eje sin seccionar por selección del usuario.':'Espacios blancos conservados como vacíos; confirma la convención de ejes sin seccionar.','Geometría interior propuesta desde una sola sección; no es un despiece CAD certificado.']};
+  return {profiles,balls:paired,voids,features:detectMechanicalFeatures(image,drawing,{axis:center,orientation,threshold}),axis:center,orientation,core,materialMask:solid,assumptions:['Corte reconstruido desde regiones rayadas y contornos cerrados de la lámina.',core==='shaft'?'Núcleo longitudinal interpretado como eje sin seccionar por selección del usuario.':'Espacios blancos conservados como vacíos; confirma la convención de ejes sin seccionar.','Geometría interior propuesta desde una sola sección; no es un despiece CAD certificado.']};
 }
 
 export function sectionVectorPaths(section){

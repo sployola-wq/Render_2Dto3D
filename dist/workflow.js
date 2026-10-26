@@ -1,3 +1,4 @@
+import { bindPlanComparator } from './plan-comparator.js';
 import { createDisciplineController } from './discipline-controller.js';
 import { REFERENCE_PROJECTS,GENERATED_EXTERIOR_PROJECTS, createPresentationStore, canRestorePresentation } from './presentation-projects.js';
 import { estimateReferenceRegistration, registrationFromBounds } from './reference-surfaces.js';
@@ -83,14 +84,16 @@ function setStep(step){
   $('flowDescription').textContent=step===1?'Prepara tu lámina, define una escala y transforma el trazo en espacio.':'Desliza la cortina para comprobar la alineación de la geometría sobre el plano.';
   $('boardEyebrow').textContent=step===1?'PASO 1 / MESA TÉCNICA':discipline.active?'PASO 2 / VISTA TÉCNICA':'PASO 2 / RENDER CENITAL';document.querySelector('[data-step="2"] span').firstChild.textContent=discipline.active?'Vista procesada':'Render cenital';
   for(const id of ['preprocessControls','processVectors'])$(id).hidden=step!==1;
-  for(const id of ['advance3d','backToPlan','comparatorControls','downloadRender','renderBadge'])$(id).hidden=step!==2;
+  for(const id of ['advance3d','backToPlan','downloadRender','renderBadge'])$(id).hidden=step!==2;
+  $('comparatorControls').hidden=!model.asset;
+  $('comparatorControls').inert=step!==2;
   if(discipline.active)$('processVectors').hidden=true;
   $('step2Controls').hidden=step!==2;const cgiDetails=$('step2Controls').querySelector('details');if(step===2&&discipline.domain==='exterior'&&cgiDetails)cgiDetails.open=true;$('generateCGI').textContent=discipline.domain==='exterior'?'✦ Generar fachada con IA':'✦ Generar con OpenAI';$('fileQueue').hidden=step!==1||model.queue.length<2;$('replacePlanFiles').hidden=step!==1;
   $('proceedStep2').hidden=step!==1||!model.processed;
   $('extractionStatus').hidden=step!==1||!model.processed;
   $('downloadClean').hidden=step!==1;
   render.hidden=step!==2||model.sourceOnly;$('curtainLine').hidden=step!==2||!model.compare;
-  $('renderMode').textContent=discipline.active?'Vista procesada':'Render cenital';$('renderSource').querySelector('[value="technical"]').textContent=discipline.active?'Proyección del modelo especializado':'Render local ambientado';
+  $('renderMode').textContent=discipline.active?'Vista procesada':'Render cenital';$('renderSource').querySelector('[value="technical"]').textContent=discipline.active?'Render frontal · alineado al plano':'Render local ambientado';
   if(discipline.active)$('flowDescription').textContent=step===1?'Define la disciplina, revisa el perfil y especifica los parámetros del modelo.':'Compara la lámina con su interpretación técnica. Revisa contornos y supuestos antes de ir a 3D.';
   drawBoard();applyCurtain();requestAnimationFrame(fitBoard);
 }
@@ -267,11 +270,12 @@ $('processVectors').onclick=async()=>{
 function configureDisciplineUI(){document.body.dataset.drawingDomain=discipline.domain;if(discipline.active)$('finishPrompt').value=discipline.domain==='exterior'?'Fachada sobria, revestimiento claro, perfilería oscura y vidrio azul grisáceo. Conserva el alzado y sus aberturas.':discipline.domain==='mechanical'?'Acero satinado, iluminación de estudio y proporciones de la pieza original. Conserva los cortes y componentes representados.':'Perfiles de acero, conexiones según el dibujo y fondo neutro. Conserva los ejes y apoyos representados.';else $('finishPrompt').value=FINISH_PRESETS[$('finishPreset').value].prompt;}
 function updateDisciplineMetrics(){
   const size=discipline.result?.size,provisional=!discipline.scaleKnown,values=size?[distanceLabel(size[0]),distanceLabel(size[1]),distanceLabel(size[2]),String(discipline.result.parts)]:['—','—','—','—'];
-  for(const[id,label,i]of [['metricLength','ANCHO / LONGITUD',0],['metricWidth','ALTO / DIÁMETRO',1],['metricPerimeter','FONDO',2],['metricArea',discipline.domain==='structure'?'BARRAS':'VOLÚMENES',3]]){$(id).previousElementSibling.textContent=label;$(id).textContent=(size&&provisional&&i<3?'≈ ':'')+values[i];}
+  for(const[id,label,i]of [['metricLength','ANCHO / LONGITUD',0],['metricWidth','ALTO / DIÁMETRO',1],['metricPerimeter','FONDO',2],['metricArea',discipline.domain==='structure'?'BARRAS':'COMPONENTES',3]]){$(id).previousElementSibling.textContent=label;$(id).textContent=(size&&provisional&&i<3?'≈ ':'')+values[i];}
   $('flowScaleStatus').textContent=discipline.scaleKnown?`${discipline.scaleLabel} · ${fmt(scale()*1000,3)} mm / píxel`:'Escala provisional · longitud configurada por el usuario';$('metricNote').textContent=discipline.result?.assumptions.join(' ')??'Define la región, revisa el perfil y procesa el modelo especializado. No se calculan resistencia ni capacidades de carga.';
+  if(discipline.result?.group.userData.mechanicalAssembly)$('metricNote').textContent='Conjunto propuesto por componentes · eje opcional · detalles revisables. '+(provisional?'Medidas provisionales: calibra la lámina.':'XY según la calibración de la lámina.')+' Revisa cada pieza en el visor 3D.';
   if(model.measurements.length){const m=model.measurements.at(-1);$('rulerResult').textContent=`${provisional?'Provisional · ':''}${distanceLabel(distance(...m,scale()))} · ${model.measurements.length} medición(es)`;}
 }
-function installDisciplineResult(output){if(!output)return;const first=!model.processed;model.render=output.canvas;model.spatialRender=output.spatialCanvas;$('renderSource').querySelector('[value=spatial]').disabled=!output.spatialCanvas;if(first&&output.spatialCanvas){$('renderSource').value='spatial';$('renderMode').click();}model.vectors=output.vectors;model.bounds=output.bounds;model.processed=true;model.processedHash=model.asset.identity;model.renderRecord={...createRenderRecord({sourceHash:model.processedHash,width:clean.width,height:clean.height,kind:'technical',nativeWidth:output.canvas.width,nativeHeight:output.canvas.height}),domain:discipline.domain,geometryValidated:false,assumptions:output.result.assumptions};$('analysisQuality').hidden=false;$('analysisQuality').textContent=output.result.assumptions.join(' ');$('extractionStatus').textContent='Modelo especializado preparado · revisa su geometría y sus parámetros.';$('proceedStep2').innerHTML='Continuar al Paso 2 <span>→</span>';drawBoard();updateMetrics();updatePresentationLabel();}
+function installDisciplineResult(output){if(!output)return;const first=!model.processed;model.render=output.canvas;model.spatialRender=output.spatialCanvas;$('renderSource').querySelector('[value=spatial]').disabled=!output.spatialCanvas;if(first){$('renderSource').value='technical';comparator.setMode('compare');}model.vectors=output.vectors;model.bounds=output.bounds;model.processed=true;model.processedHash=model.asset.identity;model.renderRecord={...createRenderRecord({sourceHash:model.processedHash,width:clean.width,height:clean.height,kind:'technical',nativeWidth:output.canvas.width,nativeHeight:output.canvas.height}),domain:discipline.domain,geometryValidated:false,assumptions:output.result.assumptions};$('analysisQuality').hidden=false;$('analysisQuality').textContent=output.result.assumptions.join(' ');$('extractionStatus').textContent='Modelo especializado preparado · revisa su geometría y sus parámetros.';$('proceedStep2').innerHTML='Continuar al Paso 2 <span>→</span>';drawBoard();updateMetrics();updatePresentationLabel();}
 async function processDiscipline(){const returnStep=model.step;if(model.busy||!model.asset)return;if(discipline.pending){message('Cierra o cancela el trazo pendiente antes de procesar.',true);return;}setBusy(true);message('Extrayendo geometría para la disciplina seleccionada…');await nextPaint();try{await discipline.prepareMaterials();installDisciplineResult(discipline.process(true));await restoreProjectPresentation();setBusy(false);setStep(returnStep===3?3:1);message('Modelo especializado listo. Revisa los perfiles y continúa al Paso 2.');}catch(error){message(error.message,true);}finally{setBusy(false);}}
 function handleDisciplineChange(reason){
   document.body.dataset.drawingDomain=discipline.domain;if(reason==='overlay'){drawOverlay();return;}if(reason==='routing'){if(discipline.routingBlocked){model.processed=false;model.render=null;model.spatialRender=null;model.vectors=null;setStep(1);}setBusy(model.busy);return;}
@@ -303,15 +307,10 @@ function generateRender(){
   drawBoard();if(model.step===3){textureModel=null;attachTexture();syncAppearance(true);}
 }
 
-function applyCurtain(){const value=Number($('curtainRange').value);$('curtainValue').textContent=`${value} %`;$('curtainLine').style.left=`${value}%`;render.style.clipPath=model.compare?`inset(0 0 0 ${value}%)`:'none';render.hidden=model.step!==2||model.sourceOnly;$('curtainLine').hidden=model.step!==2||!model.compare;$('originalBadge').hidden=model.step===2&&!model.compare&&!model.sourceOnly;}
-$('curtainRange').oninput=applyCurtain;
-let comparePointer=null;
-const updateCompareFromPointer=event=>{const rect=$('boardFrame').getBoundingClientRect();$('curtainRange').value=Math.max(0,Math.min(100,(event.clientX-rect.left)/rect.width*100));applyCurtain();};
-$('boardFrame').addEventListener('pointerdown',event=>{if(model.step!==2||!model.compare||model.mode||model.panEnabled||event.button!==0||event.target.closest('.curtain-line'))return;event.preventDefault();comparePointer=event.pointerId;$('boardFrame').setPointerCapture(event.pointerId);updateCompareFromPointer(event);});
-$('boardFrame').addEventListener('pointermove',event=>{if(comparePointer===event.pointerId)updateCompareFromPointer(event);});
-for(const type of ['pointerup','pointercancel'])$('boardFrame').addEventListener(type,event=>{if(comparePointer!==event.pointerId)return;comparePointer=null;if($('boardFrame').hasPointerCapture(event.pointerId))$('boardFrame').releasePointerCapture(event.pointerId);});
-for(const [id,mode] of [['compareMode','compare'],['renderMode','render'],['sourceMode','source']])$(id).onclick=()=>{if(mode==='compare'&&$('renderSource').value==='spatial'){$('renderSource').value='technical';drawPresentation();updatePresentationLabel();}model.compare=mode==='compare';model.sourceOnly=mode==='source';for(const [other,value] of [['compareMode','compare'],['renderMode','render'],['sourceMode','source']]){$(other).classList.toggle('active',mode===value);$(other).setAttribute('aria-pressed',String(mode===value));}applyCurtain();};
-$('curtainLine').onpointerdown=e=>{if(model.mode||model.panEnabled)return;e.preventDefault();$('curtainLine').setPointerCapture(e.pointerId);};$('curtainLine').onpointermove=e=>{if(!$('curtainLine').hasPointerCapture(e.pointerId))return;const rect=$('boardFrame').getBoundingClientRect();$('curtainRange').value=Math.max(0,Math.min(100,(e.clientX-rect.left)/rect.width*100));applyCurtain();};$('curtainLine').onpointerup=e=>{if($('curtainLine').hasPointerCapture(e.pointerId))$('curtainLine').releasePointerCapture(e.pointerId);};
+const comparator=bindPlanComparator({state:model,frame:$('boardFrame'),render,line:$('curtainLine'),range:$('curtainRange'),value:$('curtainValue'),originalBadge:$('originalBadge'),buttons:{compare:$('compareMode'),render:$('renderMode'),source:$('sourceMode')},onCompare(){
+  if($('renderSource').value==='spatial'){$('renderSource').value='technical';drawPresentation();updatePresentationLabel();}
+}});
+function applyCurtain(){comparator.apply();}
 $('downloadVectors').onclick=()=>{const vectors=model.asset.kind==='dxf'?{paths:model.asset.mappedPaths}:model.vectors;save(new Blob([vectorSVG(vectors,clean.width,clean.height,Number($('vectorWidth').value))],{type:'image/svg+xml'}),'prodalam-vectores.svg');};$('downloadRender').onclick=async()=>{try{save(await blobFromCanvas($('renderSource').value==='presentation'&&model.presentation?model.presentation.canvas:$('renderSource').value==='spatial'?model.spatialRender:model.render),'prodalam-render-cenital.png');}catch(e){message(e.message,true);}};
 function attachTexture(){
   const {planMesh,model:current}=bridge.context();if(!model.render||!planMesh||textureModel===current||bridge.snapshot().imageSha256!==model.processedHash)return;
@@ -377,8 +376,8 @@ function drawPresentation(){
   target.drawImage(source,(render.width-size.width)/2,(render.height-size.height)/2,size.width,size.height);
 }
 function updatePresentationLabel(){
-  if(discipline.active&&$('renderSource').value==='spatial'){$('renderBadge').textContent='RENDER 3D · MATERIALES REALES';$('renderProvenance').textContent='Vista volumétrica del mismo modelo navegable del Paso 3. Para comparar trazos, elige la proyección frontal.';return;}
-  if(discipline.active&&$('renderSource').value!=='presentation'){$('renderBadge').textContent=discipline.domain==='exterior'?'PROYECCIÓN DE FACHADA · REVISAR':'PROYECCIÓN MECÁNICA / ESTRUCTURAL';$('renderProvenance').textContent='Proyección renderizada del mismo modelo del Paso 3, alineada con la lámina. Revisa la escala, los perfiles y las dimensiones asumidas.';return;}
+  if(discipline.active&&$('renderSource').value==='spatial'){$('renderBadge').textContent='PERSPECTIVA 3D · VISTA LIBRE';$('renderProvenance').textContent='Perspectiva del mismo modelo del Paso 3. Mueve la cortina o pulsa Comparar para volver al render frontal alineado.';return;}
+  if(discipline.active&&$('renderSource').value!=='presentation'){$('renderBadge').textContent=discipline.domain==='exterior'?'PROYECCIÓN DE FACHADA · REVISAR':discipline.domain==='mechanical'?(discipline.project?.params.representation==='assembly'?'CONJUNTO v3.0 · FRONTAL ALINEADO':'CORTE FRONTAL · METAL MECANIZADO'):'PROYECCIÓN ESTRUCTURAL · ALINEADA';$('renderProvenance').textContent='Proyección renderizada del mismo modelo del Paso 3, alineada con la lámina. Revisa la escala, los perfiles y las dimensiones asumidas.';return;}
   const p=$('renderSource').value==='presentation'?model.presentation:null;
   $('renderBadge').textContent=p?(p.record.kind==='linked'?'DISEÑO VINCULADO · v2.3':p.record.kind==='generated'?'OPENAI · POR REVISAR':'RENDER IMPORTADO · POR REVISAR'):'RENDER LOCAL · PASO 2';
   if(p?.record.kind==='generated'&&!cgiConfigured)$('cgiStatus').textContent='Este proyecto tiene una propuesta IA guardada. Para generar otra, conecta tu proveedor de IA o importa un nuevo diseño.';
@@ -403,7 +402,7 @@ async function restoreProjectPresentation(){
   const linked=discipline.active?null:REFERENCE_PROJECTS[identity];if(!linked)return false;
   try{const response=await fetch(linked.url);if(!response.ok)return false;const image=await decodeImage(await response.blob());if(model.version!==version||model.asset.identity!==identity)return false;await installPresentation(image,'linked',{designName:linked.name,imageBounds:linked.imageBounds});return true;}catch{return false;}
 }
-$('renderSource').onchange=()=>{if($('renderSource').value==='spatial')$('renderMode').click();drawPresentation();updatePresentationLabel();};
+$('renderSource').onchange=()=>{if($('renderSource').value==='spatial')comparator.setMode('render');drawPresentation();updatePresentationLabel();applyCurtain();};
 $('finishPrompt').value=FINISH_PRESETS.oak.prompt;
 $('finishPreset').onchange=()=>{$('finishPrompt').value=FINISH_PRESETS[$('finishPreset').value].prompt;if(model.processed){generateRender();drawPresentation();}};
 async function checkCGIStatus(){

@@ -1,4 +1,4 @@
-# Prodalam Render Pro v2.9
+# Prodalam Render Pro v3.0
 
 Aplicación local de preparación de planos y reconstrucción 3D. Repositorio de esta entrega: [sployola-wq/Render_2Dto3D](https://github.com/sployola-wq/Render_2Dto3D).
 
@@ -7,6 +7,16 @@ npm start
 ```
 
 Abrir **http://127.0.0.1:4173**. Los recursos del navegador se incluyen en `dist/vendor`; la vista estática no requiere instalar dependencias para iniciar. Node.js 20 o superior.
+
+## Cambios v3.0 · Conjunto por componentes
+
+La nueva presentación mecánica **v3.0 · Conjunto por componentes** separa la sección en bridas, carcasa, tapa y cierre según los cambios de envolvente de la lámina. Los roles son propuestas revisables. El **Eje escalonado propuesto**, opcional, interpreta los límites emparejados del núcleo como un eje sin seccionar. El corte de regiones anterior y la envolvente cerrada siguen disponibles.
+
+El Paso 2 mantiene la proyección frontal alineada y la cortina. El visor permite seleccionar piezas por nombre, aislarlas y mostrar un **Despiece** reversible. El STL siempre exporta la posición ensamblada, aunque el visor muestre el despiece. El JSON conserva la geometría de origen y sus supuestos. Se mantienen los tornillos y rodamientos propuestos de la mejora anterior.
+
+La v3.0 es una aplicación estática de módulos ES. `npm run build` verifica la versión visible y las rutas locales y genera `dist/build-info.json`; `npm test` ejecuta las pruebas. No requiere instalar un compilador ni nuevas dependencias.
+
+Una sola sección no determina tolerancias, referencias de piezas o geometría oculta de fabricación. La interpretación de eje y los roles de los componentes deben revisarse. Ver [cambios y validación v3.0](reports/conjunto-v3-12.md).
 
 ## Cambios v2.9 · Profundidad arquitectónica y metal sin trazos
 

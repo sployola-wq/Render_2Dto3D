@@ -1,0 +1,12 @@
+{
+  "version": "3.0.0",
+  "format": "static-es-modules",
+  "modules": 37,
+  "features": [
+    "aligned-comparison",
+    "mechanical-components",
+    "optional-stepped-shaft",
+    "exploded-view",
+    "canonical-stl"
+  ]
+}
