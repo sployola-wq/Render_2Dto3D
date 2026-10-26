@@ -1,3 +1,53 @@
+# Diseño vinculado v2.5 — 25 de octubre de 2026
+
+Se recuperó explícitamente el CGI aprobado de v2.3 para este plano (no era una generación local). `dist/presentation-projects.js` permite solo los dos SHA exactos del ejemplo 1280×749 y del JPEG aportado 724×424; asset nativo `dist/assets/presentation/reference-v23.png` SHA 881b59749fe4043a63095e58c2eae4b2e4f7ca6219987386bb7149b2026efb8d. `kind:linked` nunca declara validación geométrica. Nunca usar esta referencia para inferencia ni otros planos.
+
+IndexedDB guarda imágenes nativas y encuadre por SHA original + tamaño de marco. Reprocesar filtros/calibración conserva el diseño del mismo plano al restaurar; no restaura todo el estado de una sesión. El inicio sigue vacío. `reference-surfaces.js` extrae parches limpios y textiles; el encuadre de esta referencia conocida usa sus límites visuales explícitos, sin intervenir en el reconocimiento. Apariencia 3D recuperó 8 pisos y ambientó 53 muebles en la prueba real. El exterior es una superficie fotográfica; no son árboles 3D ni nuevas detecciones. Muebles de catálogo, no modelos 3D reconstruidos de la foto. La nueva v2.5 mantiene el núcleo 3D de v2.4 y su inferencia.
+
+71 pruebas Node + 4 Python aprobadas. Backend/server siguen activos en sesión 44969. No hay clave OpenAI ni generación nueva. Entrega v2.5 preparada para publicar en `origin/main` de `sployola-wq/Render_2Dto3D`. Copia previa de los archivos de presentación en `.local-backup/v2.4-before-reference/` (ignorada). Ver `reports/diseno-vinculado-08.md`.
+
+---
+
+# Carga real v2.4 — 25 de octubre de 2026
+
+La prueba anterior sobre el ejemplo guardado no cubría archivos nuevos. El servidor Node carecía de rutas de inferencia y no había modelos/entorno en este Mac. Se preparó `.venv`, se verificaron los pesos del manifiesto y se integró un worker local gestionado por `npm start` (puerto privado 4174, frontend/API 4173). Sesión de servidor final: 44969.
+
+El caso real es `/Users/macsl/Downloads/images (2).jpeg`, SHA e31bf22f4e6e71bc96e679cde230ee6d243b02d3064cabbce085312e7999c34e. Se verificó inferencia real y carga desde una mesa vacía. Se recuperaron siete camas, se resolvieron conflictos sanitarios mediante símbolos de la misma imagen y se apartaron ocho fragmentos pequeños. No se usaron la referencia manual ni el CGI para inferir la geometría.
+
+Se retiró la carga lateral duplicada, el inicio usa mesa vacía, y el cargador antiguo del Paso 3 queda oculto. Hay resumen de calidad, bandas estructurales con evidencia del mismo archivo, máscaras de baño/cocina del modelo existente, pisos exteriores delimitados y muebles cosméticos detallados. El render local del Paso 2 comparte la presentación con el Paso 3 y tiene resolución propia hasta 2048 px. «Ampliar mesa» se cierra con Escape.
+
+62 pruebas Node + 4 Python aprobadas. `architecture.js`, `components.js` y `detector.js` no cambian. `app.js` añade solo `importAnalysis` al adaptador público; no cambia su constructor 3D. Ver `reports/carga-real-07.md` para los límites. **El resultado local todavía no iguala al CGI adjunto**; OpenAI sigue sin clave y no se hizo generación externa. No presentar la imagen de referencia como salida generada. Cambios locales, sin push en esta etapa.
+
+---
+
+# Ambientación del Paso 3 v2.3 — 25 de octubre de 2026
+
+El usuario autorizó enriquecer el aspecto del Paso 3 aprovechando el render del Paso 2, conservando el proceso de creación 3D. Se añadieron `appearance-mapping.js` y `appearance-3d.js` y la integración en `workflow.js`. El núcleo `app.js`, `architecture.js`, `components.js` y `detector.js` sigue idéntico a HEAD.
+
+55 pruebas aprobadas. El modo Ambientado clona/restaura materiales, crea una cobertura cosmética de piso separada y mantiene vértices, jerarquía, posición, orientación, visibilidad y cámara. Los colores se aproximan desde el render compatible; no se recrean muebles desde la fotografía ni se declara precisión geométrica nueva. Sin render usa el estilo local del Paso 2. Ver `reports/ambientacion-3d-06.md`.
+
+En navegador: 10 zonas de piso, 51 muebles ambientados, controles de capas/altura/cotas operativos. Permanecen las 24 regiones, 88 propuestas y 31 aberturas con soporte del ejemplo. Se comprobaron el regreso a Técnico y el retorno al Paso 2. Los cambios siguen locales; no se hizo push en esta etapa.
+
+---
+
+# Integración Argon v2.2 — 25 de octubre de 2026
+
+Se revisó la carpeta hermana `Beta_Render_Pro-main_Argon` y se adaptaron mejoras de los pasos 1 y 2. El usuario pidió una alternativa a Gemini: se preparó OpenAI mediante el endpoint oficial de edición de imágenes. No hay clave configurada ni se hizo una generación real. El informe `reports/integracion-argon-05.md` registra procedencia, decisiones, limitaciones y validación.
+
+El render fotorrealista es una presentación independiente: `model.presentation`. El render técnico permanece en `model.render` y la geometría del visor no se deriva de la imagen generada. `dist/app.js`, `architecture.js`, `components.js` y `detector.js` no cambian en esta integración.
+
+Validación: 46 pruebas, incluida la integración OpenAI con respuestas simuladas; importación del PNG existente del usuario y regreso al Paso 3 conservando los resultados anteriores. El proyecto fuente no se modifica; no se trasladan su geometría PDF fija, generación heurística de mobiliario, visores 3D ni funciones comerciales.
+
+---
+
+# Actualización v2.1 — mesa 2D y nuevo proyecto
+
+Cambios locales del 25 de octubre de 2026: botón Nuevo proyecto con confirmación y estado vacío, importación por arrastre en toda la mesa y encuadre proporcional según su tamaño real. El nuevo módulo `dist/workspace-ui.js` comparte el comportamiento de importación y el cálculo de encuadre.
+
+`dist/app.js` y la implementación original del visor 3D no cambian en esta actualización. Verificación: 38 pruebas aprobadas; cancelación del reinicio, reinicio desde el Paso 3, importación después de vaciar el proyecto, plano vertical 600 × 1200 con encuadre completo en escritorio 2248 × 1307 y móvil 390 × 844; sin errores de consola. Las preferencias globales se conservan.
+
+---
+
 # Entrega local Prodalam Render Pro v2.0 — 25 de octubre de 2026
 
 Destino solicitado: `https://github.com/sployola-wq/Render_2Dto3D`.

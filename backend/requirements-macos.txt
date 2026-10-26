@@ -1,0 +1,7 @@
+# Validated on macOS arm64 with Python 3.12. Keep this environment local.
+torch==2.7.1
+torchvision==0.22.1
+ultralytics==8.3.221
+opencv-python==4.11.0.86
+numpy==2.2.6
+pillow==11.3.0

@@ -5,17 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#163d36">
   <meta name="description" content="Carga un plano y explora su levantamiento automático en 3D.">
-  <title>Prodalam Render Pro v2.0</title>
+  <title>Prodalam Render Pro v2.5</title>
   <link rel="stylesheet" href="./style.css">
   <link rel="stylesheet" href="./reconstruction.css">
-  <link rel="stylesheet" href="./workflow.css">
+  <link rel="stylesheet" href="./workflow.css?v=2.5">
   <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
 </head>
 <body>
   <header class="app-header">
-    <a class="brand" href="./" aria-label="Prodalam Render Pro, inicio"><span class="brand-icon">P</span><span>PRODALAM<small>RENDER PRO <b>v2.0</b></small></span></a>
+    <a class="brand" href="./" aria-label="Prodalam Render Pro, inicio"><span class="brand-logo"><img src="./assets/brand/prodalam-logo.png" alt="Prodalam"></span><span class="brand-product">Render Pro <b>v2.5</b></span></a>
     <div class="header-project"><span class="project-dot"></span> Ingeniería · Espacios digitales</div>
-    <div class="top-actions"><button id="themeToggle" aria-label="Activar modo oscuro">◐ <span>Modo oscuro</span></button><button id="settingsButton" aria-label="Abrir ajustes">⚙ <span>Ajustes</span></button><button id="aboutButton">ⓘ <span>Acerca de / Desarrollador</span></button></div>
+    <div class="top-actions"><button id="newProjectButton" class="new-project-button"><span aria-hidden="true">＋</span> Nuevo proyecto</button><button id="themeToggle" aria-label="Activar modo oscuro">◐ <span>Modo oscuro</span></button><button id="settingsButton" aria-label="Abrir ajustes">⚙ <span>Ajustes</span></button><button id="aboutButton">ⓘ <span>Acerca de / Desarrollador</span></button></div>
     <button id="helpButton" class="icon-button" aria-label="Cómo funciona">?</button>
   </header>
   <nav class="flow-progress" aria-label="Etapas del proyecto">
@@ -27,17 +27,31 @@
   <section id="workflow" class="flow-layout" aria-label="Preparación del proyecto">
     <aside class="flow-sidebar">
       <div class="flow-intro"><span class="eyebrow">PROYECTO DE INGENIERÍA</span><h1 id="flowTitle">Todo comienza<br>con un plano.</h1><p id="flowDescription">Prepara tu lámina, define una escala y transforma el trazo en espacio.</p></div>
-      <section class="flow-section"><h2><span>01</span> Láminas del proyecto</h2>
-        <label id="flowDrop" class="flow-drop" for="flowFiles"><strong>＋</strong><b>Arrastra tus planos aquí</b><span>o selecciona varios archivos</span><small>PNG · JPG · WEBP · PDF · DXF / 20 MB por archivo</small></label>
-        <input id="flowFiles" type="file" multiple accept=".png,.jpg,.jpeg,.webp,.pdf,.dxf" hidden>
-        <div id="fileQueue" class="file-queue" aria-label="Archivos del proyecto"></div>
-        <label id="pdfPageRow" hidden>Página del PDF <select id="pdfPage" aria-label="Página del PDF"></select></label>
+      <section id="step2Controls" class="flow-section" hidden>
+        <h2><span>02</span> Diseño del proyecto</h2>
+        <p class="flow-hint">Compara tu plano con el diseño. La presentación vinculada se conserva y suministra los acabados del modelo 3D.</p>
+        <label class="source-label" for="renderSource">Imagen presentada</label>
+        <select id="renderSource"><option value="technical">Render local ambientado</option><option value="presentation" disabled>Diseño fotorrealista del proyecto</option></select>
+        <p id="renderProvenance" class="flow-hint">Geometría calculada desde el plano.</p>
+        <button id="importCGI" class="flow-secondary">↥ Importar render existente</button><input id="cgiFile" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+        <details class="render-tools"><summary>Crear otra presentación</summary>
+          <label class="source-label" for="finishPreset">Acabado del render local</label><select id="finishPreset"><option value="oak">Roble cálido</option><option value="neutral">Contemporáneo</option><option value="industrial">Industrial</option></select>
+          <label class="source-label" for="finishPrompt">Instrucciones para la IA</label><textarea id="finishPrompt" rows="4" maxlength="2000" placeholder="Materiales, iluminación y mobiliario…"></textarea>
+          <p id="cgiStatus" class="scale-state" role="status">Comprobando motor de imágenes…</p><button id="generateCGI" class="flow-primary" disabled>✦ Generar con OpenAI</button><button id="cancelCGI" class="flow-secondary" hidden>Cancelar generación</button>
+          <p class="flow-hint">Al generar, la lámina limpia y estas instrucciones se envían a OpenAI. Requiere una clave de API propia. Conservamos tu presentación hasta recibir la nueva.</p>
+        </details>
       </section>
-      <section id="preprocessControls" class="flow-section"><h2><span>02</span> Preparación del plano</h2>
+      <input id="flowFiles" type="file" multiple accept=".png,.jpg,.jpeg,.webp,.pdf,.dxf" hidden>
+      <div id="fileQueue" class="file-queue" aria-label="Láminas cargadas" hidden></div>
+      <label id="pdfPageRow" hidden>Página del PDF <select id="pdfPage" aria-label="Página del PDF"></select></label>
+
+      <section id="preprocessControls" class="flow-section"><h2><span>01</span> Preparación del plano</h2>
         <label class="flow-check"><span>Cuadrícula técnica graduada</span><input id="technicalGrid" type="checkbox" checked></label>
+        <label class="flow-check"><span>Limpieza de papel y nitidez</span><input id="paperCleanup" type="checkbox"></label>
         <label class="flow-check"><span>Escala de grises</span><input id="grayscale" type="checkbox"></label>
         <label class="flow-check"><span>Invertir contraste</span><input id="invertContrast" type="checkbox"></label>
         <div class="flow-field"><label for="vectorWidth">Grosor vectorial</label><output id="vectorWidthValue">1,0 px</output></div><input id="vectorWidth" type="range" min="1" max="5" step="0.5" value="1">
+        <label class="flow-check"><span>Ver lámina</span><select id="sourcePreview"><option value="prepared">Preparada</option><option value="original">Original</option></select></label><label class="flow-check"><span>Mostrar capa vectorial</span><input id="vectorOverlay" type="checkbox" disabled></label>
         <p class="flow-hint">El grosor se aplica a trazos DXF y a los contornos extraídos. Los filtros se aplican a la lámina de análisis.</p>
       </section>
       <section class="flow-section"><h2><span>↔</span> Medición técnica interna</h2>
@@ -48,17 +62,24 @@
         <output id="rulerResult" class="ruler-result">Selecciona la regla y marca dos puntos.</output>
         <div class="tool-row"><button id="areaToggle" class="flow-secondary" aria-pressed="false">▱ Delimitar superficie</button><button id="closeArea" class="flow-secondary" hidden>Cerrar contorno</button></div><button id="clearMeasurements" class="flow-text">Limpiar mediciones</button>
       </section>
+
+      <div id="analysisQuality" class="analysis-quality" role="status" hidden></div>
+      <div id="extractionStatus" class="extraction-status" role="status" hidden></div>
+      <button id="proceedStep2" class="flow-primary" hidden>Continuar al Paso 2 <span>→</span></button>
       <button id="processVectors" class="flow-primary">Procesar y extraer vectores 2D <span>→</span></button>
       <button id="advance3d" class="flow-primary" hidden>Avanzar a 3D <span>→</span></button>
       <button id="backToPlan" class="flow-text" hidden>← Volver a preparar el plano</button>
     </aside>
     <div class="flow-workspace">
-      <header class="flow-workbar"><div><span class="eyebrow" id="boardEyebrow">PASO 1 / MESA TÉCNICA</span><strong id="boardFilename">plano.jpeg</strong></div><div class="tool-row"><button id="downloadVectors" class="flow-secondary" disabled>↓ Vectores SVG</button><button id="downloadRender" class="flow-secondary" hidden>↓ Render PNG</button><button id="resetBoard" class="flow-secondary" aria-label="Encuadrar plano">⌗ Encuadrar</button></div></header>
-      <div id="boardMessage" class="board-message" role="status" aria-live="polite">Preparando lámina de ejemplo…</div>
-      <div id="boardStage" class="board-stage">
-        <div id="boardFrame" class="board-frame"><canvas id="originalCanvas" aria-label="Plano original preparado"></canvas><canvas id="renderCanvas" aria-label="Render cenital CGI" hidden></canvas><canvas id="measureCanvas" aria-label="Superposición de medición, marca dos puntos"></canvas><div id="curtainLine" class="curtain-line" hidden><span>↔</span></div><span id="originalBadge" class="board-badge original-badge">PLANO · PASO 1</span><span id="renderBadge" class="board-badge render-badge" hidden>CGI CENITAL · PASO 2</span></div>
+      <header class="flow-workbar"><div><span class="eyebrow" id="boardEyebrow">PASO 1 / MESA TÉCNICA</span><strong id="boardFilename">Proyecto sin título</strong></div><div class="tool-row"><button id="replacePlanFiles" class="flow-secondary">↥ Cambiar plano</button><button id="downloadClean" class="flow-secondary" disabled>↓ Plano limpio</button><button id="downloadVectors" class="flow-secondary" disabled>↓ Vectores SVG</button><button id="downloadRender" class="flow-secondary" hidden>↓ Render PNG</button><div class="board-navigation" role="group" aria-label="Navegación de la mesa"><button id="boardZoomOut" class="flow-secondary" aria-label="Alejar plano" disabled>−</button><output id="boardZoomValue">100 %</output><button id="boardZoomIn" class="flow-secondary" aria-label="Acercar plano" disabled>＋</button><button id="boardPan" class="flow-secondary" aria-pressed="false" disabled>✥ Mover</button></div><button id="focusDesk" class="flow-secondary" aria-pressed="false">⛶ Ampliar mesa</button><button id="resetBoard" class="flow-secondary" aria-label="Encuadrar plano">⌗ Encuadrar</button></div></header>
+      <div id="renderBusy" class="render-busy" role="status" hidden><span class="spinner"></span><span>Generando imagen con OpenAI…</span><small>Puede tardar unos minutos. Conservamos el render anterior hasta recibir uno nuevo.</small></div>
+      <div id="boardMessage" class="board-message" role="status" aria-live="polite">Iniciando el espacio de trabajo…</div>
+      <div id="boardStage" class="board-stage is-empty" role="region" aria-label="Mesa 2D: arrastra tus archivos de plano aquí" aria-busy="false">
+        <div id="boardEmpty" class="board-empty"><span class="empty-plan-icon" aria-hidden="true">▱</span><span class="eyebrow">NUEVO PROYECTO</span><h2>Tu próxima idea empieza aquí.</h2><p>Arrastra tus planos a esta mesa o selecciona archivos para comenzar.</p><button id="chooseBoardFiles" class="flow-primary" disabled>＋ Seleccionar planos</button><small>PNG · JPG · WEBP · PDF · DXF · Hasta 20 MB por archivo</small><button id="loadExample" class="flow-text" disabled>Explorar con el plano de ejemplo ↗</button></div>
+        <div class="board-drop-feedback" aria-hidden="true"><span>＋</span><strong>Suelta tus planos aquí</strong><small>Se añadirán a las láminas de este proyecto</small></div>
+        <div id="boardFrame" class="board-frame" hidden><canvas id="originalCanvas" aria-label="Plano original preparado"></canvas><canvas id="renderCanvas" aria-label="Render cenital local" hidden></canvas><canvas id="measureCanvas" aria-label="Superposición de medición, marca dos puntos"></canvas><div id="curtainLine" class="curtain-line" hidden><span>↔</span></div><span id="originalBadge" class="board-badge original-badge">PLANO · PASO 1</span><span id="renderBadge" class="board-badge render-badge" hidden>RENDER LOCAL · PASO 2</span></div>
       </div>
-      <div id="comparatorControls" class="comparator-controls" hidden><div class="compare-tabs" role="group" aria-label="Vista del Paso 2"><button id="compareMode" class="active" aria-pressed="true">Comparador avanzado Pasos 1 · 2</button><button id="renderMode" aria-pressed="false">Render cenital</button></div><label for="curtainRange">Cortina <output id="curtainValue">50 %</output></label><input id="curtainRange" type="range" min="0" max="100" value="50" aria-label="Posición de la cortina comparativa"></div>
+      <div id="comparatorControls" class="comparator-controls" hidden><div class="compare-tabs" role="group" aria-label="Vista del Paso 2"><button id="compareMode" class="active" aria-pressed="true">Comparador avanzado Pasos 1 · 2</button><button id="renderMode" aria-pressed="false">Render cenital</button><button id="sourceMode" aria-pressed="false">Plano limpio</button></div><label for="curtainRange">Cortina <output id="curtainValue">50 %</output></label><input id="curtainRange" type="range" min="0" max="100" value="50" aria-label="Posición de la cortina comparativa"></div>
       <section class="geometry-metrics" aria-label="Métricas de geometría"><div><span>LARGO TOTAL</span><strong id="metricLength">—</strong></div><div><span>ANCHO TOTAL</span><strong id="metricWidth">—</strong></div><div><span>PERÍMETRO</span><strong id="metricPerimeter">—</strong></div><div><span>SUPERFICIE</span><strong id="metricArea">—</strong></div><p id="metricNote">Envolvente rectangular de la estructura. Calibra para obtener medidas reales.</p></section>
     </div>
   </section>
@@ -66,7 +87,7 @@
   <main class="app-layout">
     <aside class="sidebar">
       <div class="intro"><span class="eyebrow">DEL PLANO AL ESPACIO</span><h1>Reconocer.<br>Comparar. Levantar.</h1><p>Estructura y mobiliario.<br>Resultados que puedes comprobar.</p></div>
-      <section class="source-section" aria-labelledby="sourceTitle">
+      <section class="source-section" aria-labelledby="sourceTitle" hidden>
         <div class="section-label"><h2 id="sourceTitle">01 <span>Plano de origen</span></h2><span class="small-tag">JPEG · PNG · WEBP</span></div>
         <label class="upload-card" id="dropZone" for="fileInput" tabindex="0">
           <img id="sourceThumb" src="./assets/plano.jpeg?v=9f3f598dd2db" alt="Miniatura del plano cargado">
@@ -114,7 +135,7 @@
         <label class="layer-row"><span>Cuadrícula de apoyo</span><input id="gridVisible" type="checkbox"></label>
       </section>
       <div class="prototype-note"><span>◌</span><p><strong>Medir antes de dar por correcto.</strong>Las aberturas sin muro asociado quedan para revisión en 2D. Alturas y orientación del mobiliario requieren comprobarse.</p></div>
-      <div class="sidebar-footer"><span class="status-dot"></span> Prodalam Render Pro v2.0 · Local</div>
+      <div class="sidebar-footer"><span class="status-dot"></span> Prodalam Render Pro v2.5 · Local</div>
     </aside>
     <section class="workspace" aria-label="Visor del plano y del modelo">
       <div class="workspace-toolbar">
@@ -144,13 +165,14 @@
     </section>
   </main>
   </div>
-  <footer class="product-footer"><span>PRODALAM <b>Render Pro v2.0</b></span><span>Ingeniería · Medición interna · Procesamiento local</span><button id="footerAbout">Acerca del proyecto ↗</button></footer>
+  <footer class="product-footer"><span>PRODALAM <b>Render Pro v2.5</b></span><span>Ingeniería · Medición interna · Procesamiento local</span><button id="footerAbout">Acerca del proyecto ↗</button></footer>
   <div id="toast" class="toast" role="status" hidden></div>
   <dialog id="calibrationDialog"><form id="calibrationForm"><span class="eyebrow">ESCALA DEL PROYECTO</span><h2>Una medida real.</h2><p>¿Qué distancia hay entre los dos puntos que marcaste?</p><label for="realDistance">Distancia en metros</label><input id="realDistance" type="number" min="0.01" max="10000" step="any" value="1" required><div class="dialog-actions"><button type="button" id="cancelDistance" class="outline-button">Cancelar</button><button type="submit" class="primary-button">Aplicar escala</button></div></form></dialog>
   <dialog id="helpDialog"><span class="eyebrow">BLUEPRINT BUILDER · ENSAYO 04</span><h2>Reconocer y comprobar.</h2><p>La estructura se obtiene con un segmentador CubiCasa5K y los símbolos con un detector YOLOv8 especializado en planos. No se han entrenado con esta imagen.</p><p>La versión publicada incluye el resultado de una ejecución local sobre <strong>plano.jpeg</strong>, verificado por la huella SHA-256 del archivo. Para analizar imágenes nuevas con IA, ejecuta el servicio Python del proyecto. Sin ese servicio, las imágenes nuevas usan el detector geométrico y se indica su limitación.</p><p><strong>Evaluación</strong> compara las predicciones con anotaciones manuales iniciales de este único plano. Los objetos se emparejan por clase y superposición de cajas (IoU ≥ 0,50). Los muros se comparan por área de máscara. Estos valores no demuestran precisión sobre otros planos.</p><p>La fuente <strong>Referencia manual</strong> sirve para inspeccionar el resultado esperado; nunca completa ni corrige silenciosamente las predicciones. Escala, alturas y orientación del mobiliario requieren revisión.</p><p>El ensayo 04 incorpora una auditoría de 15 aberturas. La asociación con un muro y la revisión de su geometría se muestran por separado; seis ventanas todavía requieren ajustes de extensión o alineación.</p><button id="closeHelp" class="primary-button">Entendido</button></dialog>
+  <dialog id="newProjectDialog" class="flow-dialog" aria-labelledby="newProjectTitle" aria-describedby="newProjectDescription"><span class="eyebrow">NUEVO PROYECTO</span><h2 id="newProjectTitle">Una mesa en blanco.</h2><p id="newProjectDescription">Se quitarán las láminas, las mediciones, la calibración y los resultados del proyecto actual. Tu tema y la ficha del desarrollador se conservarán.</p><div class="dialog-actions"><button id="cancelNewProject" class="flow-secondary" autofocus>Continuar aquí</button><button id="confirmNewProject" class="flow-primary">Comenzar de cero</button></div></dialog>
   <dialog id="flowDistanceDialog"><form id="flowDistanceForm"><span class="eyebrow">CALIBRACIÓN MÉTRICA</span><h2>Define una distancia real.</h2><p>Introduce la longitud conocida entre los dos puntos seleccionados.</p><label for="flowDistance">Distancia en metros</label><input id="flowDistance" type="number" min="0.001" max="10000" step="any" value="1" required><div class="dialog-actions"><button type="button" id="cancelFlowDistance" class="flow-secondary">Cancelar</button><button class="flow-primary" type="submit">Aplicar escala</button></div></form></dialog>
-  <dialog id="aboutDialog" class="flow-dialog"><button class="dialog-close" data-close="aboutDialog" aria-label="Cerrar acerca de">×</button><span class="eyebrow">INGENIERÍA & DESARROLLO</span><h2>Prodalam Render Pro <em>v2.0</em></h2><p>Entorno de ingeniería para preparar planos, comparar una representación cenital y explorar una reconstrucción 3D. Herramientas de calibración y dimensionamiento para revisión técnica interna.</p><dl class="developer-card"><dt>Desarrollador</dt><dd id="aboutName">Por configurar</dd><dt>Rol</dt><dd id="aboutRole">Ingeniero de Software</dd><dt>Organización</dt><dd id="aboutOrg">Prodalam</dd><dt>Contacto / Soporte técnico</dt><dd><a id="aboutContact" hidden target="_blank" rel="noopener noreferrer">Contactar ↗</a><span id="aboutNoContact">Por configurar en Ajustes</span></dd></dl><button id="configureDeveloper" class="flow-secondary">Configurar ficha del desarrollador</button></dialog>
-  <dialog id="settingsDialog" class="flow-dialog"><button class="dialog-close" data-close="settingsDialog" aria-label="Cerrar ajustes">×</button><span class="eyebrow">AJUSTES / PRODALAM RENDER PRO v2.0</span><h2>Tu espacio de trabajo.</h2><form id="developerForm"><label for="developerName">Nombre del desarrollador</label><input id="developerName" maxlength="100" placeholder="Nombre y apellido"><label for="developerRole">Rol</label><input id="developerRole" maxlength="100" value="Ingeniero de Software"><label for="developerOrg">Organización</label><input id="developerOrg" maxlength="100" value="Prodalam"><label for="developerContact">Enlace de contacto / Soporte técnico</label><input id="developerContact" type="url" placeholder="https://…"><p>La ficha y el tema se guardan en este navegador.</p><button type="submit" class="flow-primary">Guardar ajustes</button></form></dialog>
-  <script type="module" src="./workflow.js?v=2"></script>
+  <dialog id="aboutDialog" class="flow-dialog"><button class="dialog-close" data-close="aboutDialog" aria-label="Cerrar acerca de">×</button><span class="eyebrow">INGENIERÍA & DESARROLLO</span><h2>Prodalam Render Pro <em>v2.5</em></h2><p>Entorno de ingeniería para preparar planos, comparar una representación cenital y explorar una reconstrucción 3D. Herramientas de calibración y dimensionamiento para revisión técnica interna.</p><dl class="developer-card"><dt>Desarrollador</dt><dd id="aboutName">Por configurar</dd><dt>Rol</dt><dd id="aboutRole">Ingeniero de Software</dd><dt>Organización</dt><dd id="aboutOrg">Prodalam</dd><dt>Contacto / Soporte técnico</dt><dd><a id="aboutContact" hidden target="_blank" rel="noopener noreferrer">Contactar ↗</a><span id="aboutNoContact">Por configurar en Ajustes</span></dd></dl><button id="configureDeveloper" class="flow-secondary">Configurar ficha del desarrollador</button></dialog>
+  <dialog id="settingsDialog" class="flow-dialog"><button class="dialog-close" data-close="settingsDialog" aria-label="Cerrar ajustes">×</button><span class="eyebrow">AJUSTES / PRODALAM RENDER PRO v2.5</span><h2>Tu espacio de trabajo.</h2><form id="developerForm"><label for="developerName">Nombre del desarrollador</label><input id="developerName" maxlength="100" placeholder="Nombre y apellido"><label for="developerRole">Rol</label><input id="developerRole" maxlength="100" value="Ingeniero de Software"><label for="developerOrg">Organización</label><input id="developerOrg" maxlength="100" value="Prodalam"><label for="developerContact">Enlace de contacto / Soporte técnico</label><input id="developerContact" type="url" placeholder="https://…"><p>La ficha y el tema se guardan en este navegador.</p><details class="provider-help"><summary>Motor de imágenes del Paso 2</summary><p>OpenAI se configura en el archivo <code>.env</code> del servidor con <code>OPENAI_API_KEY</code>. La clave no se guarda en el navegador. Reinicia el servidor después de configurarla. El render técnico y la importación de imágenes funcionan sin clave.</p></details><button type="submit" class="flow-primary">Guardar ajustes</button></form></dialog>
+  <script type="module" src="./workflow.js?v=2.5"></script>
 </body>
 </html>

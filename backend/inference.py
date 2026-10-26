@@ -20,6 +20,7 @@ from PIL import Image, ImageOps
 import torch
 import torch.nn.functional as F
 from cubicasa_model import hg_furukawa_original
+from symbol_repetition import refine_repeated_beds, refine_sanitary_conflicts
 from ultralytics import YOLO
 
 STRUCTURE_SOURCE = 'https://github.com/CubiCasa/CubiCasa5k'
@@ -96,6 +97,21 @@ class Engine:
         icon_prob = prediction_logits[0,33:44].softmax(0)
         rooms = room_prob.argmax(0).cpu().numpy().astype(np.uint8)
         icons = icon_prob.argmax(0).cpu().numpy().astype(np.uint8)
+        # Semantic room classes from the existing model: Kitchen=3, Bath=6.
+        # Finish masks do not replace wall geometry or measured surfaces.
+        finish_regions = []
+        for class_id, category in [(3, 'kitchen'), (6, 'bathroom')]:
+            binary = (rooms == class_id).astype(np.uint8)
+            count, ids, stats, _ = cv2.connectedComponentsWithStats(binary)
+            probabilities = room_prob[class_id].cpu().numpy()
+            for component, (rx,ry,rw,rh,area) in enumerate(stats[1:],1):
+                if area < width*height*.003: continue
+                confidence = float(probabilities[ids == component].mean())
+                if confidence < .7: continue
+                contours, _ = cv2.findContours((ids == component).astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                for contour in contours:
+                    outer = cv2.approxPolyDP(contour, 1, True).reshape(-1,2).tolist()
+                    if len(outer)>=3: finish_regions.append({'category':category,'outer':outer,'holes':[],'confidence':round(confidence,4),'source':'cubicasa-room-segmentation','reviewRequired':True})
         labels = np.zeros((height,width),dtype=np.uint8)
         labels[rooms == 2] = 1
         labels[icons == 2] = 2
@@ -138,17 +154,21 @@ class Engine:
                 regions.append({'category':category,'bbox':bbox,'areaPixels':int(area),'confidence':round(confidence,4),'source':'structural-segmentation'})
                 semantic_objects.append({'id':f'semantic-{len(semantic_objects)+1}','category':category,'bbox':bbox,'confidence':round(confidence,4),'source':'cubicasa-segmentation','reviewRequired':True})
         raw_objects = objects
+        refined_objects, repetition = refine_repeated_beds(image, objects, semantic_objects)
         def iou(a,b):
             overlap=max(0,min(a[2],b[2])-max(a[0],b[0]))*max(0,min(a[3],b[3])-max(a[1],b[1]))
             return overlap / max(1,(a[2]-a[0])*(a[3]-a[1])+(b[2]-b[0])*(b[3]-b[1])-overlap)
+        refined_objects, semantic_objects, sanitary_changes = refine_sanitary_conflicts(image, refined_objects, semantic_objects)
         fixtures=[o for o in semantic_objects if o['category'] not in ['door','window'] and o['confidence']>=.5]
-        objects=[o for o in raw_objects if o['category'] not in ['door','window','toilet','sink','bathtub','wardrobe','cupboard'] and not any(iou(o['bbox'],f['bbox'])>.35 for f in fixtures)]
-        objects.extend(semantic_objects)
+        objects=[o for o in refined_objects if o['category'] not in ['door','window','toilet','sink','bathtub','wardrobe','cupboard'] and not any(iou(o['bbox'],f['bbox'])>.35 for f in fixtures)]
+        review_only=[o for o in semantic_objects if o['category'] in ['wardrobe','appliance'] and (min(o['bbox'][2]-o['bbox'][0],o['bbox'][3]-o['bbox'][1])<max(3,width*.01) or (o['bbox'][2]-o['bbox'][0])*(o['bbox'][3]-o['bbox'][1])<width*height*.0005)]
+        excluded={o['id'] for o in review_only}
+        objects.extend(o for o in semantic_objects if o['id'] not in excluded)
         return {'schemaVersion':2, 'imageSha256':hashlib.sha256(image_bytes).hexdigest(),
             'width':width, 'height':height, 'naturalSize':natural_size, 'walls':[], 'openings':[],
             'wallPolygons':polygons, 'objects':objects, 'rawObjectDetections':raw_objects, 'structuralRegions':regions,
             'method':'cubicasa-hourglass-and-yolov8-floorplan', 'provenance':self.provenance,
-            'elapsedSeconds':round(time.perf_counter()-started,3), 'minimumStoredConfidence':.10}
+            'elapsedSeconds':round(time.perf_counter()-started,3), 'minimumStoredConfidence':.10,'finishRegions':finish_regions,'symbolRefinement':repetition,'sanitaryRefinement':sanitary_changes,'reviewOnlyObjects':[dict(o,reason='Small fixture fragment; not extruded as tall furniture') for o in review_only]}
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

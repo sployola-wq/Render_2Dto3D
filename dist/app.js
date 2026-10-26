@@ -571,6 +571,11 @@ export const blueprintBridge = Object.freeze({
     state.prediction = null; state.reference = null;
     $('geometrySource').value = 'geometry'; syncResult(true);
   },
+  importAnalysis: prediction => {
+    if(prediction.imageSha256!==state.imageSha256||prediction.width!==pixelCanvas.width||prediction.height!==pixelCanvas.height)throw new Error('El análisis no corresponde a la lámina activa.');
+    state.prediction=structuredClone(prediction);
+    $('geometrySource').value='model';syncResult();
+  },
   snapshot: () => ({ ...state, image: undefined, imageBytes: undefined }),
   context: () => ({ scene, camera, renderer, controls, model, planMesh, pixelCanvas }),
   architecture,

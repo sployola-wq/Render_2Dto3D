@@ -2,6 +2,7 @@
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 import json
+import argparse
 import threading
 import os
 from pathlib import Path
@@ -53,9 +54,12 @@ class Handler(SimpleHTTPRequestHandler):
             inference_lock.release()
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--port', type=int, default=4173)
+    args = parser.parse_args()
     print('Cargando modelos locales…',flush=True)
     engine = Engine()
-    server = ThreadingHTTPServer(('127.0.0.1',4173),Handler)
-    print('Local: http://127.0.0.1:4173',flush=True)
+    server = ThreadingHTTPServer(('127.0.0.1',args.port),Handler)
+    print(f'Local: http://127.0.0.1:{args.port}',flush=True)
     try: server.serve_forever()
     except KeyboardInterrupt: server.server_close()

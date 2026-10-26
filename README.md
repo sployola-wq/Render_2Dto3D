@@ -1,4 +1,4 @@
-# Prodalam Render Pro v2.0
+# Prodalam Render Pro v2.5
 
 Aplicación local de preparación de planos y reconstrucción 3D. Repositorio de esta entrega: [sployola-wq/Render_2Dto3D](https://github.com/sployola-wq/Render_2Dto3D).
 
@@ -8,7 +8,56 @@ npm start
 
 Abrir **http://127.0.0.1:4173**. Los recursos del navegador se incluyen en `dist/vendor`; la vista estática no requiere instalar dependencias para iniciar. Node.js 20 o superior.
 
-## Flujo v2.0
+## Cambios v2.5 · Conservar el diseño y transferir sus acabados
+
+El diseño fotorrealista aprobado de v2.3 está vinculado explícitamente a los dos archivos conocidos de este plano (ejemplo y JPEG adjunto), por SHA-256. Se muestra por defecto en el Paso 2; es una referencia aportada por el usuario, **no una nueva generación ni una salida de la inferencia local**. Otros planos necesitan su propia presentación importada o generada.
+
+Las presentaciones importadas/generadas se guardan en IndexedDB por identidad de archivo y dimensiones del marco, y se recuperan al volver a abrir y procesar ese mismo plano. No se usan nombres de archivo para asociarlas. La exportación conserva los píxeles nativos; la vista comparativa usa hasta 3072 px y mantiene las coordenadas técnicas del plano.
+
+El Paso 3 toma muestras reales de piso, madera y textiles, excluye mobiliario/sombras/césped de los parches de acabado y añade una superficie exterior opcional. Los muebles de catálogo incorporan bordes biselados, almohadas y costuras. Toda la ambientación pertenece a un grupo separado y a materiales clonados; el modo Técnico restaura los originales. El constructor 3D, las cámaras y el cálculo de geometría/medidas se conservan.
+
+Validación: **71 pruebas Node y 4 Python**, más carga real del JPEG, recuperación tras recarga, comparación y navegación al 3D. Detalles y límites en [reports/diseno-vinculado-08.md](reports/diseno-vinculado-08.md).
+
+## Cambios v2.4 · Carga real desde cero
+
+Se habilitó el reconocimiento local para imágenes nuevas en macOS. `npm start` inicia automáticamente el motor preparado y sirve `/api/health` y `/api/analyze` junto con la app. En este equipo ya están instalados el entorno y los pesos verificados. Para repetir la preparación: `sh setup-local.sh` y después `npm start`.
+
+La mesa comienza vacía y se eliminó la carga lateral redundante. La calidad del análisis se indica expresamente. Se recuperan símbolos repetidos del propio archivo, se apartan fragmentos pequeños, se complementan divisiones respaldadas por líneas del plano y se aprovechan los recintos segmentados para sus acabados.
+
+Los pasos 2 y 3 comparten materiales y muebles de presentación detallados; la geometría de construcción, la calibración y los controles del visor conservan su proceso. Se incorpora «Ampliar mesa» y render local hasta 2048 px. **El render local no equivale al CGI fotorrealista de referencia**; esa generación opcional requiere configurar OpenAI.
+
+**62 pruebas JavaScript + 4 Python aprobadas.** Se verificó el JPEG adjunto desde una mesa vacía. Ver [diagnóstico, validación y límites](reports/carga-real-07.md).
+
+## Cambios v2.3 · Ambientación del Paso 3
+
+El visor incorpora **Ambientado / Técnico**. El acabado aplica colores aproximados del render del Paso 2, texturas de madera y textiles, cerámica y una iluminación de presentación al modelo ya construido. El mobiliario conserva su forma y ubicación; la estructura, las aberturas y la calibración siguen a cargo del motor existente.
+
+La capa es reversible y funciona localmente con un render importado. Sin render compatible usa el estilo seleccionado del Paso 2. Incluye ajuste de correspondencia y plano de referencia. Los archivos del núcleo 3D permanecen sin cambios.
+
+**55 pruebas aprobadas.** Ver [alcance, límites y validación](reports/ambientacion-3d-06.md).
+
+## Cambios v2.2 · Recuperación del trabajo Argon
+
+Se integraron mejoras de los pasos 1 y 2 desde `Beta_Render_Pro-main_Argon`, conservando el motor 3D actual:
+
+- Limpieza de papel y nitidez opcional; vista original/preparada y capa vectorial conmutable.
+- Zoom, desplazamiento y encuadre, con medición en las coordenadas del plano.
+- Revisión explícita de la extracción antes de continuar al Paso 2.
+- Estilos e instrucciones de acabado, vista de render/plano/cortina, importación de renders existentes y descarga PNG en su resolución nativa.
+- Integración opcional con OpenAI para edición de imagen a partir del plano limpio. No se envían imágenes al abrir el Paso 2; la generación exige una acción explícita.
+
+Para habilitar OpenAI, copiar `.env.example` a `.env`, configurar `OPENAI_API_KEY` y reiniciar el servidor. La clave permanece en el servidor. Sin clave funcionan la mesa, la extracción, el render técnico y la importación. La generación real con OpenAI no se probó porque no hay una clave configurada; se verificó su contrato mediante respuestas simuladas.
+
+Ver [revisión y decisiones de integración](reports/integracion-argon-05.md). **46 pruebas aprobadas.**
+
+## Cambios v2.1
+
+- Botón **Nuevo proyecto** visible desde todas las etapas. Confirma antes de vaciar la sesión y restablece láminas, calibraciones, herramientas y resultados, conservando tema y ficha del desarrollador.
+- La **mesa 2D completa** admite arrastrar múltiples archivos, con una indicación visual al soltar. La tarjeta lateral mantiene la misma función.
+- Encuadre de la lámina completa según su proporción y el espacio real disponible. Se reajusta al cambiar de etapa o redimensionar la ventana, y **Encuadrar** aplica el mismo ajuste.
+- Estado vacío con selección de planos y acceso opcional al ejemplo. Las herramientas requieren una lámina cargada.
+
+## Flujo v2.1
 
 1. **Mesa 2D:** carga múltiple PNG/JPG/WEBP/PDF/DXF, selección de página PDF, cuadrícula graduada, grises, inversión, grosor vectorial y extracción de contornos. Procesamiento local, hasta 20 MB por archivo.
 2. **Render cenital:** CGI de la geometría disponible mediante una cámara y un renderer independientes; cortina comparativa alineada en coordenadas de imagen. Exportación SVG y PNG.
@@ -20,7 +69,7 @@ Las métricas automáticas corresponden a la **envolvente rectangular** de la es
 
 ## Alcance de la entrega
 
-- El render cenital es CGI con materiales y alturas de catálogo. **No se ha implementado un motor de render fotorrealista ni generación de acabados por IA.**
+- El render cenital es CGI con materiales y alturas de catálogo. La presentación fotorrealista se puede importar o generar mediante la integración opcional de OpenAI; requiere una clave de API propia y revisión visual. No sustituye la geometría técnica del plano.
 - Los PDF se rasterizan localmente antes de extraer geometría; se puede seleccionar cualquier página.
 - El importador DXF conserva trazos compatibles y avisa de entidades omitidas. Filtra capas con nombres de muros cuando existen. Los contornos cerrados pareados se interpretan como bandas de muro; los trazos aislados usan un espesor supuesto y requieren revisión. No es un intérprete BIM general.
 - Los modelos Python y sus pesos no están incluidos. La IA de planos nuevos requiere preparar el servicio local; sin él se usa el detector geométrico. El ejemplo incluido conserva su predicción precalculada.
@@ -32,7 +81,7 @@ Las métricas automáticas corresponden a la **envolvente rectangular** de la es
 npm test
 ```
 
-35 pruebas: las 27 originales más medición, conversión de coordenadas, contornos CAD, perímetros/superficies y validación de enlaces. Ver `tests/workflow.test.mjs`. Las bibliotecas PDF.js y DXF Parser están fijadas en `package-lock.json` y sus licencias acompañan a los archivos de `dist/vendor`.
+46 pruebas: las 27 originales más medición, conversión de coordenadas, contornos CAD, perímetros/superficies y validación de enlaces. Ver `tests/workflow.test.mjs`, `tests/workspace-ui.test.mjs` y `tests/argon-integration.test.mjs`. Las bibliotecas PDF.js y DXF Parser están fijadas en `package-lock.json` y sus licencias acompañan a los archivos de `dist/vendor`.
 
 ## Antecedentes del proyecto Blueprint Builder
 
