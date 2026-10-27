@@ -1,6 +1,7 @@
+import {renderContext,sameRenderContext,PRESENTATION_REVISION} from './project-context.js';
 import { bindPlanComparator } from './plan-comparator.js';
 import { createDisciplineController } from './discipline-controller.js';
-import { REFERENCE_PROJECTS,GENERATED_EXTERIOR_PROJECTS, createPresentationStore, canRestorePresentation } from './presentation-projects.js';
+import { createPresentationStore, canRestorePresentation } from './presentation-projects.js';
 import { estimateReferenceRegistration, registrationFromBounds } from './reference-surfaces.js';
 import { refineStructure } from './structure-evidence.js';
 import { summarizeAnalysis } from './analysis-quality.js';
@@ -16,14 +17,15 @@ import { distance, polygonMetrics, geometryBounds, pointOnCanvas, pixelToWorld, 
 const $=id=>document.getElementById(id), readStore=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fallback;}catch{return fallback;}},saveStore=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value));}catch{message('El navegador no permite guardar las preferencias. Se aplican en esta sesión.');}};
 const model={step:1,queue:[],asset:null,selection:0,version:0,processed:false,boundary:[],mode:null,points:[],measurements:[],calibration:null,bounds:null,vectors:null,render:null,compare:true,threeRuler:false,busy:false,view:{zoom:1,panX:0,panY:0},panEnabled:false,sourceOnly:false,presentation:null,renderRecord:null};
 const original=$('originalCanvas'),render=$('renderCanvas'),overlay=$('measureCanvas');
-const clean=document.createElement('canvas'),preview=document.createElement('canvas');
-const discipline=createDisciplineController({panel:$('disciplinePanel'),host:$('discipline3Host'),source:()=>({canvas:clean,overlay,asset:model.asset,calibration:model.calibration,busy:model.busy,presentation:model.presentation}),onChange:handleDisciplineChange,onTool:()=>{model.mode=null;model.points=[];model.panEnabled=false;$('rulerToggle').setAttribute('aria-pressed','false');$('areaToggle').setAttribute('aria-pressed','false');applyBoardTransform();},message:(...args)=>message(...args),goStep:step=>setStep(step)});
+const clean=document.createElement('canvas'),analysisCanvas=document.createElement('canvas'),preview=document.createElement('canvas');
+const discipline=createDisciplineController({panel:$('disciplinePanel'),host:$('discipline3Host'),source:()=>({canvas:clean,analysisCanvas,overlay,asset:model.asset,calibration:model.calibration,busy:model.busy,presentation:$('renderSource').value==='presentation'?model.presentation:null,analysisRevision:model.version}),onChange:handleDisciplineChange,onTool:()=>{model.mode=null;model.points=[];model.panEnabled=false;$('rulerToggle').setAttribute('aria-pressed','false');$('areaToggle').setAttribute('aria-pressed','false');applyBoardTransform();},message:(...args)=>message(...args),goStep:step=>setStep(step)});
 
 let cgiConfigured=false,cgiAbort=null;
 let topRenderer,lastCalibration,lastWorkflowHash,extensionGroup=new THREE.Group(),last3DModel,textureModel,frameId;
 extensionGroup.name='ProdalamV2TechnicalOverlay';
 const appearance=createAppearanceLayer();
 const presentationStore=createPresentationStore();
+const captureRenderContext=()=>renderContext(model,discipline.domain,clean.width,clean.height),contextIsCurrent=scope=>sameRenderContext(scope,captureRenderContext());
 let appearanceApplied=false,appearanceImage=null,appearancePixels=null,appearanceTimer;
 const appearanceOptions={mode:'ambient',reference:false,referenceTextures:true,environment:true,registration:{offsetX:0,offsetY:0,zoom:1}};
 const theme=readStore('prodalam.theme','light');
@@ -93,7 +95,7 @@ function setStep(step){
   $('extractionStatus').hidden=step!==1||!model.processed;
   $('downloadClean').hidden=step!==1;
   render.hidden=step!==2||model.sourceOnly;$('curtainLine').hidden=step!==2||!model.compare;
-  $('renderMode').textContent=discipline.active?'Vista procesada':'Render cenital';$('renderSource').querySelector('[value="technical"]').textContent=discipline.active?'Render frontal · alineado al plano':'Render local ambientado';
+  $('renderMode').textContent=discipline.active?'Vista procesada':'Render cenital';$('renderSource').querySelector('[value="technical"]').textContent=discipline.active?'Lámina completa · materiales y cotas':'Render local ambientado';
   if(discipline.active)$('flowDescription').textContent=step===1?'Define la disciplina, revisa el perfil y especifica los parámetros del modelo.':'Compara la lámina con su interpretación técnica. Revisa contornos y supuestos antes de ir a 3D.';
   drawBoard();applyCurtain();requestAnimationFrame(fitBoard);
 }
@@ -127,7 +129,7 @@ function resetProject(){
   const oldAssets=model.queue,hashes=new Set(oldAssets.map(a=>a.identity).filter(Boolean));
   if(model.processedHash)hashes.add(model.processedHash);
   for(const hash of hashes)try{for(const d of ['interior','exterior','mechanical','structure'])localStorage.removeItem(`prodalam.discipline.v1.${hash}.${d}`);localStorage.removeItem(`prodalam.discipline.v1.${hash}`);localStorage.removeItem(`prodalam.scale.${hash}`);localStorage.removeItem(`blueprint.scale.v1.${hash}`);}catch{}
-  Object.assign(model,{step:1,queue:[],asset:null,source:null,selection:model.selection+1,version:model.version+1,processed:false,processedHash:null,boundary:[],mode:null,points:[],measurements:[],calibration:null,bounds:null,vectors:null,render:null,compare:true,threeRuler:false,busy:false,view:{zoom:1,panX:0,panY:0},panEnabled:false,sourceOnly:false,presentation:null,renderRecord:null});
+  Object.assign(model,{step:1,queue:[],asset:null,source:null,selection:model.selection+1,version:model.version+1,processed:false,processedHash:null,spatialRender:null,boundary:[],mode:null,points:[],measurements:[],calibration:null,bounds:null,vectors:null,render:null,compare:true,threeRuler:false,busy:false,view:{zoom:1,panX:0,panY:0},panEnabled:false,sourceOnly:false,presentation:null,renderRecord:null});
   discipline.show(false);discipline.reset();document.body.dataset.drawingDomain='interior';appearance.restore();appearanceApplied=false;appearanceImage=null;appearancePixels=null;resetAppearanceOptions();
   lastCalibration=null;textureModel=null;resetPresentation();$('paperCleanup').checked=false;$('vectorOverlay').checked=false;$('sourcePreview').value='prepared';$('boardPan').setAttribute('aria-pressed','false');
   disposeOverlay();
@@ -164,12 +166,12 @@ async function selectAsset(asset){
     }else source=asset.image??await decodeImage(asset.file);
     if(token!==model.selection)return;
     $('boardFrame').hidden=false;$('boardEmpty').hidden=true;$('boardStage').classList.remove('is-empty');
-    resetPresentation();model.view={zoom:1,panX:0,panY:0};model.panEnabled=false;$('boardPan').setAttribute('aria-pressed','false');$('vectorOverlay').checked=false;$('sourcePreview').value='prepared';$('paperCleanup').checked=false;
-    model.asset=asset;model.source=source;model.calibration=null;model.measurements=[];model.points=[];model.mode=null;model.vectors=null;model.bounds=null;model.render=null;model.spatialRender=null;model.boundary=[];model.processed=false;model.version++;
+    resetPresentation();$('curtainRange').value='50';for(const id of ['rulerToggle','areaToggle'])$(id).setAttribute('aria-pressed','false');$('boardFrame').classList.remove('measuring');model.view={zoom:1,panX:0,panY:0};model.panEnabled=false;$('boardPan').setAttribute('aria-pressed','false');$('vectorOverlay').checked=false;$('sourcePreview').value='prepared';$('paperCleanup').checked=false;
+    model.asset=asset;model.processedHash=null;model.source=source;model.calibration=null;model.measurements=[];model.points=[];model.mode=null;model.vectors=null;model.bounds=null;model.render=null;model.spatialRender=null;model.boundary=[];model.processed=false;model.version++;
     $('grayscale').checked=false;$('invertContrast').checked=false;$('vectorWidth').value='1';$('vectorWidthValue').textContent='1,0 px';
     drawQueue();$('rulerResult').textContent='Selecciona la regla y marca dos puntos.';$('boardFilename').textContent=asset.name+(asset.kind==='pdf'?` · página ${asset.page}`:'');$('pdfPageRow').hidden=asset.kind!=='pdf';
     if(asset.pdf){$('pdfPage').replaceChildren(...Array.from({length:asset.pdf.numPages},(_,i)=>new Option(`${i+1} / ${asset.pdf.numPages}`,i+1)));$('pdfPage').value=asset.page;}
-    discipline.reset();prepareClean();
+    discipline.reset();for(const id of ['metricLength','metricWidth','metricPerimeter','metricArea'])$(id).textContent='—';$('metricNote').textContent='Analizando la lámina actual…';$('extractionStatus').hidden=true;$('proceedStep2').hidden=true;prepareClean();
     const bytes=asset.kind==='image'?await asset.file.arrayBuffer():await (await blobFromCanvas(clean)).arrayBuffer();
     asset.identity=[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(b=>b.toString(16).padStart(2,'0')).join('');
     try{model.calibration=restoreCalibration(localStorage.getItem(`prodalam.scale.${asset.identity}`),{imageSha256:asset.identity,width:clean.width,height:clean.height});}catch{}
@@ -184,11 +186,12 @@ function prepareClean(){
   if(!model.source)return;const sw=model.source.naturalWidth??model.source.width,sh=model.source.naturalHeight??model.source.height,f=Math.min(1,1400/Math.max(sw,sh));clean.width=Math.round(sw*f);clean.height=Math.round(sh*f);
   const ctx=clean.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,clean.width,clean.height);
   const filters=`grayscale(${$('grayscale').checked?1:0}) invert(${$('invertContrast').checked?1:0})`;
-  ctx.filter=$('paperCleanup').checked?'none':filters;
+  ctx.filter='none';
   if(model.asset.kind==='dxf'){
     const c=document.createElement('canvas');c.width=sw;c.height=sh;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,sw,sh);x.lineWidth=Number($('vectorWidth').value);x.strokeStyle='#1c2933';for(const p of model.asset.mappedPaths){x.beginPath();p.points.forEach(([a,b],i)=>i?x.lineTo(a,b):x.moveTo(a,b));if(p.closed)x.closePath();x.stroke();}ctx.drawImage(c,0,0,clean.width,clean.height);
   }else ctx.drawImage(model.source,0,0,clean.width,clean.height);
-  ctx.filter='none';
+  analysisCanvas.width=clean.width;analysisCanvas.height=clean.height;analysisCanvas.getContext('2d').drawImage(clean,0,0);
+  if(!$('paperCleanup').checked&&($('grayscale').checked||$('invertContrast').checked)){ctx.filter=filters;ctx.drawImage(analysisCanvas,0,0);ctx.filter='none';}
   if($('paperCleanup').checked){const enhanced=enhanceBlueprintPixels(ctx.getImageData(0,0,clean.width,clean.height));ctx.putImageData(new ImageData(enhanced.data,enhanced.width,enhanced.height),0,0);if($('grayscale').checked||$('invertContrast').checked){const copy=document.createElement('canvas');copy.width=clean.width;copy.height=clean.height;copy.getContext('2d').drawImage(clean,0,0);ctx.filter=filters;ctx.drawImage(copy,0,0);ctx.filter='none';}}
   for(const c of [original,render,overlay,preview]){c.width=clean.width;c.height=clean.height;}
   $('boardFrame').style.aspectRatio=`${clean.width}/${clean.height}`;drawBoard();requestAnimationFrame(fitBoard);
@@ -267,7 +270,7 @@ $('processVectors').onclick=async()=>{
     message(model.presentation?'Plano procesado. El diseño fotorrealista vinculado está conservado y listo para comparar en el Paso 2.':'Vectores extraídos. La lámina limpia está lista para el Paso 2. Activa la capa vectorial si quieres revisar los contornos.');
   }catch(error){message(error.message,true);}finally{setBusy(false);if(!model.processed){$('analysisQuality').hidden=true;setStep(1);}}
 };
-function configureDisciplineUI(){document.body.dataset.drawingDomain=discipline.domain;if(discipline.active)$('finishPrompt').value=discipline.domain==='exterior'?'Fachada sobria, revestimiento claro, perfilería oscura y vidrio azul grisáceo. Conserva el alzado y sus aberturas.':discipline.domain==='mechanical'?'Acero satinado, iluminación de estudio y proporciones de la pieza original. Conserva los cortes y componentes representados.':'Perfiles de acero, conexiones según el dibujo y fondo neutro. Conserva los ejes y apoyos representados.';else $('finishPrompt').value=FINISH_PRESETS[$('finishPreset').value].prompt;}
+function configureDisciplineUI(){document.body.dataset.drawingDomain=discipline.domain;if(discipline.active)$('finishPrompt').value=discipline.domain==='exterior'?'Conserva exactamente la perspectiva, la cubierta, las ventanas y todos los detalles del edificio de esta lámina. Materiales sobrios, iluminación realista; no sustituyas la construcción por otra fachada.':discipline.domain==='mechanical'?'Acabado realista según el material confirmado. Conserva todas las vistas, sus posiciones, las secciones, cotas y llamadas de la lámina completa.':'Perfiles de acero, conexiones según el dibujo y fondo neutro. Conserva los ejes y apoyos representados.';else $('finishPrompt').value=FINISH_PRESETS[$('finishPreset').value].prompt;}
 function updateDisciplineMetrics(){
   const size=discipline.result?.size,provisional=!discipline.scaleKnown,values=size?[distanceLabel(size[0]),distanceLabel(size[1]),distanceLabel(size[2]),String(discipline.result.parts)]:['—','—','—','—'];
   for(const[id,label,i]of [['metricLength','ANCHO / LONGITUD',0],['metricWidth','ALTO / DIÁMETRO',1],['metricPerimeter','FONDO',2],['metricArea',discipline.domain==='structure'?'BARRAS':'COMPONENTES',3]]){$(id).previousElementSibling.textContent=label;$(id).textContent=(size&&provisional&&i<3?'≈ ':'')+values[i];}
@@ -275,12 +278,17 @@ function updateDisciplineMetrics(){
   if(discipline.result?.group.userData.mechanicalAssembly)$('metricNote').textContent='Conjunto propuesto por componentes · eje opcional · detalles revisables. '+(provisional?'Medidas provisionales: calibra la lámina.':'XY según la calibración de la lámina.')+' Revisa cada pieza en el visor 3D.';
   if(model.measurements.length){const m=model.measurements.at(-1);$('rulerResult').textContent=`${provisional?'Provisional · ':''}${distanceLabel(distance(...m,scale()))} · ${model.measurements.length} medición(es)`;}
 }
-function installDisciplineResult(output){if(!output)return;const first=!model.processed;model.render=output.canvas;model.spatialRender=output.spatialCanvas;$('renderSource').querySelector('[value=spatial]').disabled=!output.spatialCanvas;if(first){$('renderSource').value='technical';comparator.setMode('compare');}model.vectors=output.vectors;model.bounds=output.bounds;model.processed=true;model.processedHash=model.asset.identity;model.renderRecord={...createRenderRecord({sourceHash:model.processedHash,width:clean.width,height:clean.height,kind:'technical',nativeWidth:output.canvas.width,nativeHeight:output.canvas.height}),domain:discipline.domain,geometryValidated:false,assumptions:output.result.assumptions};$('analysisQuality').hidden=false;$('analysisQuality').textContent=output.result.assumptions.join(' ');$('extractionStatus').textContent='Modelo especializado preparado · revisa su geometría y sus parámetros.';$('proceedStep2').innerHTML='Continuar al Paso 2 <span>→</span>';drawBoard();updateMetrics();updatePresentationLabel();}
+function installDisciplineResult(output){if(!output)return;if(output.project.sourceHash!==model.asset?.identity||output.project.drawing.width!==clean.width||output.project.drawing.height!==clean.height)throw new Error('El modelo pertenece a otro plano. Procesa la lámina actual.');const first=!model.processed;model.render=output.canvas;model.spatialRender=output.spatialCanvas;$('renderSource').querySelector('[value=spatial]').disabled=!output.spatialCanvas;if(first){$('renderSource').value='technical';comparator.setMode('compare');}model.vectors=output.vectors;model.bounds=output.bounds;model.processed=true;model.processedHash=model.asset.identity;model.renderRecord={...createRenderRecord({sourceHash:model.processedHash,width:clean.width,height:clean.height,kind:'technical',nativeWidth:output.canvas.width,nativeHeight:output.canvas.height}),domain:discipline.domain,geometryValidated:false,assumptions:output.result.assumptions};$('analysisQuality').hidden=false;$('analysisQuality').textContent=output.result.assumptions.join(' ');$('extractionStatus').textContent='Modelo especializado preparado · revisa su geometría y sus parámetros.';$('proceedStep2').innerHTML='Continuar al Paso 2 <span>→</span>';drawBoard();updateMetrics();updatePresentationLabel();}
 async function processDiscipline(){const returnStep=model.step;if(model.busy||!model.asset)return;if(discipline.pending){message('Cierra o cancela el trazo pendiente antes de procesar.',true);return;}setBusy(true);message('Extrayendo geometría para la disciplina seleccionada…');await nextPaint();try{await discipline.prepareMaterials();installDisciplineResult(discipline.process(true));await restoreProjectPresentation();setBusy(false);setStep(returnStep===3?3:1);message('Modelo especializado listo. Revisa los perfiles y continúa al Paso 2.');}catch(error){message(error.message,true);}finally{setBusy(false);}}
+function focusEngineeringView(){
+  const b=discipline.focusBounds;if(!b||!model.asset)return;if(model.step===3)setStep(2);
+  requestAnimationFrame(()=>{fitBoard();const stage=$('boardStage').getBoundingClientRect(),frame=$('boardFrame'),sx=frame.offsetWidth/clean.width,sy=frame.offsetHeight/clean.height,zoom=Math.max(1,Math.min(5,stage.width*.78/(b.width*sx),stage.height*.78/(b.height*sy)));
+    model.view={zoom,panX:-(.5*(b.x0+b.x1)-clean.width/2)*sx*zoom,panY:-(.5*(b.y0+b.y1)-clean.height/2)*sy*zoom};$('curtainRange').value=(b.x0+b.x1)/2/clean.width*100;applyBoardTransform();applyCurtain();});
+}
 function handleDisciplineChange(reason){
-  document.body.dataset.drawingDomain=discipline.domain;if(reason==='overlay'){drawOverlay();return;}if(reason==='routing'){if(discipline.routingBlocked){model.processed=false;model.render=null;model.spatialRender=null;model.vectors=null;setStep(1);}setBusy(model.busy);return;}
+  document.body.dataset.drawingDomain=discipline.domain;if(reason==='focus-view'){focusEngineeringView();return;}if(reason==='overlay'){drawOverlay();return;}if(reason==='routing'){if(discipline.routingBlocked){model.processed=false;model.render=null;model.spatialRender=null;model.vectors=null;setStep(1);}setBusy(model.busy);return;}
   if(reason==='domain'){configureDisciplineUI();appearance.restore();appearanceApplied=false;model.mode=null;model.points=[];resetPresentation();model.processed=false;model.render=null;model.spatialRender=null;model.bounds=null;model.vectors=null;model.version++;$('measureUnit').value=discipline.active?discipline.calibrationUnit:'m';setStep(1);updateMetrics();setBusy(false);message('Disciplina seleccionada. Procesa la lámina con su herramienta específica.');return;}
-  if(reason==='process'){processDiscipline();return;}if(model.processed&&discipline.active){try{installDisciplineResult(discipline.process(reason==='extract'));setBusy(false);}catch(error){message(error.message,true);}}else{drawOverlay();updateMetrics();}
+  if(reason==='process'){processDiscipline();return;}model.version++;if(model.processed&&discipline.active){try{installDisciplineResult(discipline.process(reason==='extract'));setBusy(false);}catch(error){message(error.message,true);}}else{drawOverlay();updateMetrics();}
 }
 function updateAnalysisQuality(snapshot){
   const quality=summarizeAnalysis(snapshot,Number($('confidence').value));
@@ -363,7 +371,7 @@ $('boardStage').addEventListener('pointermove',event=>{if(!panGesture||panGestur
 for(const type of ['pointerup','pointercancel'])$('boardStage').addEventListener(type,event=>{if(panGesture?.id!==event.pointerId)return;if($('boardStage').hasPointerCapture(event.pointerId))$('boardStage').releasePointerCapture(event.pointerId);panGesture=null;});
 $('boardStage').addEventListener('wheel',event=>{if(!model.asset||model.busy)return;event.preventDefault();const rect=$('boardStage').getBoundingClientRect();changeZoom(model.view.zoom*Math.exp(-Math.max(-100,Math.min(100,event.deltaY))*.003),[event.clientX-(rect.left+rect.width/2),event.clientY-(rect.top+rect.height/2)]);},{passive:false});
 
-function resetPresentation(){$('renderSource').querySelector('[value=spatial]').disabled=true;
+function resetPresentation(){cgiAbort?.abort();model.spatialRender=null;render.getContext('2d').clearRect(0,0,render.width,render.height);$('renderSource').querySelector('[value=spatial]').disabled=true;
   model.presentation=null;model.renderRecord=null;model.sourceOnly=false;$('analysisQuality').hidden=true;
   $('renderSource').value='technical';$('renderSource').querySelector('[value="presentation"]').disabled=true;
   updatePresentationLabel();
@@ -377,32 +385,27 @@ function drawPresentation(){
 }
 function updatePresentationLabel(){
   if(discipline.active&&$('renderSource').value==='spatial'){$('renderBadge').textContent='PERSPECTIVA 3D · VISTA LIBRE';$('renderProvenance').textContent='Perspectiva del mismo modelo del Paso 3. Mueve la cortina o pulsa Comparar para volver al render frontal alineado.';return;}
-  if(discipline.active&&$('renderSource').value!=='presentation'){$('renderBadge').textContent=discipline.domain==='exterior'?'PROYECCIÓN DE FACHADA · REVISAR':discipline.domain==='mechanical'?(discipline.project?.params.representation==='assembly'?'CONJUNTO v3.0 · FRONTAL ALINEADO':'CORTE FRONTAL · METAL MECANIZADO'):'PROYECCIÓN ESTRUCTURAL · ALINEADA';$('renderProvenance').textContent='Proyección renderizada del mismo modelo del Paso 3, alineada con la lámina. Revisa la escala, los perfiles y las dimensiones asumidas.';return;}
+  if(discipline.active&&$('renderSource').value!=='presentation'){$('renderBadge').textContent=discipline.domain==='exterior'?'PROYECCIÓN ORIGINAL · MATERIALES':discipline.domain==='mechanical'?'LÁMINA COMPLETA · ACABADO TÉCNICO':'LÁMINA ESTRUCTURAL · PROYECCIÓN ORIGINAL';$('renderProvenance').textContent='Se conservan las vistas, cotas y llamadas de la lámina. Las superficies reciben materiales; las vistas 3D compatibles se proyectan en su posición original. Confirma el material y la escala.';return;}
   const p=$('renderSource').value==='presentation'?model.presentation:null;
   $('renderBadge').textContent=p?(p.record.kind==='linked'?'DISEÑO VINCULADO · v2.3':p.record.kind==='generated'?'OPENAI · POR REVISAR':'RENDER IMPORTADO · POR REVISAR'):'RENDER LOCAL · PASO 2';
   if(p?.record.kind==='generated'&&!cgiConfigured)$('cgiStatus').textContent='Este proyecto tiene una propuesta IA guardada. Para generar otra, conecta tu proveedor de IA o importa un nuevo diseño.';
   $('renderProvenance').textContent=p?`${p.record.kind==='linked'?'Referencia aprobada de v2.3':p.record.kind==='generated'?'Generado con OpenAI':'Imagen importada'} · ${p.record.nativeWidth} × ${p.record.nativeHeight} px. Diseño vinculado al plano; revisa su correspondencia con la cortina.`:'Render local de los elementos reconocidos, con acabados de catálogo. La generación fotorrealista es una función distinta.';
 }
-async function installPresentation(image,kind,details={},persist=true){
+async function installPresentation(image,kind,details={},persist=true,scope=captureRenderContext(),activate=true){
+  if(!contextIsCurrent(scope))throw new Error('La imagen corresponde a otro plano o revisión. No se ha aplicado.');
   const canvas=document.createElement('canvas');canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;canvas.getContext('2d').drawImage(image,0,0);
-  const record=createRenderRecord({sourceHash:model.processedHash,width:clean.width,height:clean.height,nativeWidth:canvas.width,nativeHeight:canvas.height,kind,...details});record.domain=discipline.domain;record.designName=details.designName??null;record.imageBounds=details.imageBounds??null;
+  const record=createRenderRecord({sourceHash:scope.processedHash??scope.identity,width:scope.width,height:scope.height,nativeWidth:canvas.width,nativeHeight:canvas.height,kind,...details});record.domain=discipline.domain;record.designName=details.designName??null;record.imageBounds=details.imageBounds??null;
   const sample=document.createElement('canvas'),fit=fitImageSize(canvas.width,canvas.height,768,768);sample.width=Math.round(fit.width);sample.height=Math.round(fit.height);sample.getContext('2d').drawImage(canvas,0,0,sample.width,sample.height);
   appearanceOptions.registration=details.registration??(record.imageBounds?registrationFromBounds(canvas,{width:clean.width,height:clean.height},model.bounds,record.imageBounds):estimateReferenceRegistration(sample.getContext('2d').getImageData(0,0,sample.width,sample.height),{width:clean.width,height:clean.height},model.bounds));updateAlignmentInputs();
-  model.presentation={canvas,record};if(discipline.active&&model.processed)installDisciplineResult(discipline.process(false));$('renderSource').querySelector('[value="presentation"]').disabled=false;$('renderSource').value='presentation';drawPresentation();updatePresentationLabel();
-  if(persist)try{await presentationStore.put(model.asset.identity,clean.width,clean.height,{blob:await blobFromCanvas(canvas),kind,domain:discipline.domain,designName:record.designName,imageBounds:record.imageBounds,provider:record.provider,model:record.model,registration:appearanceOptions.registration},discipline.domain);}catch{$('renderProvenance').textContent+=' Disponible en esta sesión; el navegador no permitió guardarlo.';}
+  model.presentation={canvas,record};if(activate)$('renderSource').value='presentation';if(activate&&discipline.active&&model.processed)installDisciplineResult(discipline.process(false));$('renderSource').querySelector('[value="presentation"]').disabled=false;if(activate)$('renderSource').value='presentation';drawPresentation();updatePresentationLabel();
+  if(persist)try{await presentationStore.put(scope.identity,scope.width,scope.height,{blob:await blobFromCanvas(canvas),renderRevision:PRESENTATION_REVISION,kind,domain:scope.domain,designName:record.designName,imageBounds:record.imageBounds,provider:record.provider,model:record.model,registration:appearanceOptions.registration},scope.domain);}catch{if(contextIsCurrent(scope))$('renderProvenance').textContent+=' Disponible en esta sesión; el navegador no permitió guardarlo.';}
 }
 async function restoreProjectPresentation(){
-  const identity=model.asset.identity,version=model.version,width=clean.width,height=clean.height;
-  let saved;try{saved=await presentationStore.get(identity,width,height,discipline.domain);}catch{}
-  if((saved?.domain??'interior')===discipline.domain&&canRestorePresentation(saved,identity,width,height)){
-    try{const image=await decodeImage(saved.blob);if(model.version===version&&model.asset.identity===identity){await installPresentation(image,saved.kind,{designName:saved.designName,provider:saved.provider,model:saved.model,imageBounds:saved.imageBounds??(saved.kind==='linked'?REFERENCE_PROJECTS[identity]?.imageBounds:null),registration:saved.kind==='linked'&&!saved.imageBounds?undefined:saved.registration},saved.kind==='linked'&&!saved.imageBounds);return true;}}catch{}
-  }
-  const generated=discipline.domain==='exterior'?GENERATED_EXTERIOR_PROJECTS[identity]:null;
-  if(generated){try{const response=await fetch(generated.url);if(response.ok){const image=await decodeImage(await response.blob());if(model.version===version&&model.asset.identity===identity){await installPresentation(image,'generated',{designName:generated.name,provider:generated.provider,model:generated.model});return true;}}}catch{}}
-  const linked=discipline.active?null:REFERENCE_PROJECTS[identity];if(!linked)return false;
-  try{const response=await fetch(linked.url);if(!response.ok)return false;const image=await decodeImage(await response.blob());if(model.version!==version||model.asset.identity!==identity)return false;await installPresentation(image,'linked',{designName:linked.name,imageBounds:linked.imageBounds});return true;}catch{return false;}
+  const scope=captureRenderContext();let saved;try{saved=await presentationStore.get(scope.identity,scope.width,scope.height,scope.domain);}catch{}
+  if(!contextIsCurrent(scope)||!canRestorePresentation(saved,scope.identity,scope.width,scope.height,{domain:scope.domain,revision:PRESENTATION_REVISION}))return false;
+  try{const image=await decodeImage(saved.blob);if(!contextIsCurrent(scope))return false;await installPresentation(image,saved.kind,{designName:saved.designName,provider:saved.provider,model:saved.model,imageBounds:saved.imageBounds,registration:saved.registration},false,scope,false);return true;}catch{return false;}
 }
-$('renderSource').onchange=()=>{if($('renderSource').value==='spatial')comparator.setMode('render');drawPresentation();updatePresentationLabel();applyCurtain();};
+$('renderSource').onchange=()=>{if($('renderSource').value==='spatial'){model.view={zoom:1,panX:0,panY:0};applyBoardTransform();comparator.setMode('render');}else if($('renderSource').value==='technical'){model.view={zoom:1,panX:0,panY:0};applyBoardTransform();}drawPresentation();updatePresentationLabel();applyCurtain();};
 $('finishPrompt').value=FINISH_PRESETS.oak.prompt;
 $('finishPreset').onchange=()=>{$('finishPrompt').value=FINISH_PRESETS[$('finishPreset').value].prompt;if(model.processed){generateRender();drawPresentation();}};
 async function checkCGIStatus(){
@@ -411,15 +414,15 @@ async function checkCGIStatus(){
 }
 $('generateCGI').onclick=async()=>{
   if(model.busy||!model.processed||!cgiConfigured)return;
-  const hash=model.processedHash,version=model.version;setBusy(true);cgiAbort=new AbortController();$('renderBusy').hidden=false;$('cancelCGI').hidden=false;
+  const scope=captureRenderContext(),hash=model.processedHash,version=model.version;setBusy(true);cgiAbort=new AbortController();$('renderBusy').hidden=false;$('cancelCGI').hidden=false;
   message('Generando una presentación fotorrealista con OpenAI. El render actual se conserva durante la espera.');
   try{
-    const response=await fetch('./api/cgi/render',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sourceHash:hash,width:clean.width,height:clean.height,imageDataUrl:clean.toDataURL('image/png'),domain:discipline.domain,preset:$('finishPreset').value,stylePrompt:$('finishPrompt').value}),signal:cgiAbort.signal});
+    const response=await fetch('./api/cgi/render',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sourceHash:hash,width:clean.width,height:clean.height,imageDataUrl:clean.toDataURL('image/png'),domain:scope.domain,material:discipline.project?.params.material??'auto',preset:$('finishPreset').value,stylePrompt:$('finishPrompt').value}),signal:cgiAbort.signal});
     const data=await response.json();if(!response.ok)throw new Error(data.error??'No se pudo generar la imagen.');
-    if(model.version!==version||model.processedHash!==hash||data.sourceHash!==hash)throw new Error('La respuesta corresponde a otra versión del plano. No se ha aplicado.');
+    if(!contextIsCurrent(scope)||model.version!==version||model.processedHash!==hash||data.sourceHash!==hash)throw new Error('La respuesta corresponde a otra versión del plano. No se ha aplicado.');
     if(typeof data.imageDataUrl!=='string'||!data.imageDataUrl.startsWith('data:image/png;base64,'))throw new Error('El proveedor no devolvió una imagen compatible.');
     const image=new Image();image.src=data.imageDataUrl;await image.decode();
-    await installPresentation(image,'generated',{provider:data.provider,model:data.model});message('Presentación OpenAI recibida. Usa la cortina para revisar las proporciones; la geometría técnica permanece vinculada al Paso 1.');
+    await installPresentation(image,'generated',{provider:data.provider,model:data.model},true,scope);message('Presentación OpenAI recibida. Usa la cortina para revisar las proporciones; la geometría técnica permanece vinculada al Paso 1.');
   }catch(error){message(error.name==='AbortError'?'Generación cancelada. Se conserva el render anterior.':error.message,error.name!=='AbortError');}
   finally{cgiAbort=null;$('renderBusy').hidden=true;$('cancelCGI').hidden=true;setBusy(false);}
 };
@@ -428,8 +431,8 @@ $('importCGI').onclick=()=>{if(model.processed&&!model.busy)$('cgiFile').click()
 $('cgiFile').onchange=async event=>{
   const file=event.target.files[0];event.target.value='';if(!file||!model.processed||model.busy)return;
   if(file.size>20*1024*1024||!['image/png','image/jpeg','image/webp'].includes(file.type)){message('Importa un render PNG, JPG o WEBP de hasta 20 MB.',true);return;}
-  setBusy(true);
-  try{const image=await decodeImage(file);await installPresentation(image,'imported');message('Render importado para comparación visual. No se afirma que sus muros coincidan con el plano; compruébalo con la cortina.');}
+  const scope=captureRenderContext();setBusy(true);
+  try{const image=await decodeImage(file);await installPresentation(image,'imported',{},true,scope);message('Render importado para comparación visual. No se afirma que sus muros coincidan con el plano; compruébalo con la cortina.');}
   catch(error){message(error.message,true);}finally{setBusy(false);}
 };
 

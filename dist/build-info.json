@@ -1,12 +1,33 @@
 {
-  "version": "3.0.0",
+  "version": "3.3.2",
   "format": "static-es-modules",
-  "modules": 37,
+  "modules": 46,
   "features": [
     "aligned-comparison",
     "mechanical-components",
     "optional-stepped-shaft",
     "exploded-view",
-    "canonical-stl"
+    "canonical-stl",
+    "orthographic-view-selection",
+    "adaptive-mechanical-operation",
+    "companion-view-extrusion",
+    "proposed-transverse-holes",
+    "optional-raster-curve-smoothing",
+    "complete-source-sheet",
+    "companion-orthographic-render",
+    "source-context-isolation",
+    "source-faithful-exterior",
+    "material-selection",
+    "filter-independent-geometry",
+    "monochrome-dimension-separation",
+    "architectural-finish-palettes",
+    "source-plane-textures",
+    "volumetric-exterior-default",
+    "independent-exterior-depths",
+    "source-roof-family",
+    "observed-roof-elements",
+    "registered-source-geometry",
+    "source-view-camera",
+    "shared-source-face-boundaries"
   ]
 }

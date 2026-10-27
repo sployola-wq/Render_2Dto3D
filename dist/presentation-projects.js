@@ -4,7 +4,7 @@ export const REFERENCE_PROJECTS=Object.freeze({
   'e31bf22f4e6e71bc96e679cde230ee6d243b02d3064cabbce085312e7999c34e':{url:'./assets/presentation/reference-v23.png',name:'Referencia de diseño aprobada · v2.3',imageBounds:{x0:126,y0:98,x1:2535,y1:1480}}
 });
 export function presentationKey(identity,width,height){if(!/^[a-f0-9]{64}$/.test(identity??'')||![width,height].every(n=>Number.isInteger(n)&&n>0))throw new Error('Identidad de presentación no válida.');return `${identity}:${width}x${height}`;}
-export function canRestorePresentation(saved,identity,width,height){return !!saved&&saved.assetIdentity===identity&&saved.width===width&&saved.height===height&&saved.blob instanceof Blob;}
+export function canRestorePresentation(saved,identity,width,height,{domain,revision}={}){return !!saved&&saved.assetIdentity===identity&&saved.width===width&&saved.height===height&&saved.blob instanceof Blob&&(!domain||saved.domain===domain)&&(!revision||(saved.renderRevision===revision||saved.kind==='imported'&&saved.renderRevision==null)&&['imported','generated'].includes(saved.kind));}
 export function createPresentationStore(indexedDB=globalThis.indexedDB){
   let pending;
   const open=()=>pending??=(new Promise((resolve,reject)=>{if(!indexedDB){reject(new Error('El navegador no ofrece almacenamiento de proyectos.'));return;}const req=indexedDB.open('prodalam-design-references',1);req.onupgradeneeded=()=>req.result.createObjectStore('presentations');req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);}));

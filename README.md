@@ -1,4 +1,4 @@
-# Prodalam Render Pro v3.0
+# Prodalam Render Pro v3.3.2
 
 Aplicación local de preparación de planos y reconstrucción 3D. Repositorio de esta entrega: [sployola-wq/Render_2Dto3D](https://github.com/sployola-wq/Render_2Dto3D).
 
@@ -8,13 +8,45 @@ npm start
 
 Abrir **http://127.0.0.1:4173**. Los recursos del navegador se incluyen en `dist/vendor`; la vista estática no requiere instalar dependencias para iniciar. Node.js 20 o superior.
 
+## Corrección v3.3.2 · Continuidad del mismo proyecto entre Pasos 2 y 3
+
+El modo predeterminado es **3D del Paso 2 · conservar el proyecto**. La malla se obtiene de las caras visibles del archivo y usa como textura la misma superficie procesada del Paso 2. No completa ventanas, puertas, terrazas ni vegetación con las del generador conceptual. El botón **Vista del Paso 2** recupera la proyección de referencia para comprobar contornos y posiciones.
+
+Las preferencias antiguas migran al modo registrado. **Diseño conceptual · edificio alternativo** conserva el generador anterior como selección explícita. Una vista frontal usa su propio contorno con profundidad provisional; una vista axonométrica estima profundidad por las caras observadas. Es una reconstrucción de superficies visibles, con profundidad aproximada; no determina el interior ni las partes ocultas de un edificio a partir de una sola imagen. Ver [validación v3.3.2](reports/continuidad-v3-3-2.md).
+
+## Corrección v3.3.1 · Edificio con volumen en el Paso 3
+
+El Paso 3 vuelve a iniciar en **Edificio 3D**. Se corrige también la preferencia guardada de v3.2–v3.3 que imponía un relieve de imagen de 300 mm. La profundidad del edificio y el espesor del relieve se conservan por separado al alternar los modos. El Paso 2 mantiene la proyección original para comparar.
+
+Las fachadas con evidencia de varios planos de cubierta inclinados usan una cubierta volumétrica, con chimeneas y lucarnas observadas en el dibujo cuando se detectan. Se puede elegir cubierta automática, plana o a cuatro aguas. Las paletas del Paso 2 se aplican a los materiales del edificio. Los lados ocultos, las dimensiones sin calibrar y los detalles reconstruidos siguen siendo propuestas revisables. Ver [validación v3.3.1](reports/volumen-v3-3-1.md).
+
+## Cambios v3.3 · Separación de cotas y acabados exteriores
+
+El análisis especializado conserva una copia del archivo original, con el mismo marco de coordenadas, antes de aplicar los filtros de presentación. Activar escala de grises, limpieza de papel o inversión ya no elimina la diferencia de color entre geometría y cotas. En dibujos monocromos de secciones delgadas curvadas, una recuperación adicional exige una vista complementaria con círculos alineados, bordes paralelos y extremos compatibles antes de separar el material de los recintos creados por las cotas.
+
+Las fachadas incorporan tres paletas propuestas: contemporánea, ladrillo cálido y mineral. Las texturas siguen las aristas de cada paño original, con revestimientos, cubierta, pavimento, sombreado de contacto y reflejos en candidatos a cristales con marco. Los acabados se conservan en el relieve 3D y pueden corregirse por paño. No se agrega una casa de ejemplo ni se modifica la perspectiva de la lámina. Ver [validación y límites de v3.3](reports/renders-v3-3.md).
+
+## Cambios v3.2 · Lámina completa y continuidad entre proyectos
+
+El Paso 2 conserva la proyección y todos los trazos de la lámina: vistas complementarias, cotas, llamadas y rayados. Las vistas mecánicas compatibles se renderizan desde el mismo modelo y se colocan en sus coordenadas originales. El material se puede confirmar como acero, aluminio, latón/bronce, polímero, hormigón o madera. El sombreado de perfiles finos reduce el aspecto de nervaduras causado por el ruido del escaneo sin modificar la malla.
+
+El clasificador exige que la supuesta pareja de vistas represente una parte significativa del contenido; los logotipos repetidos de una ilustración arquitectónica ya no bastan para activar mecánica. Los edificios conservan su perspectiva en el Paso 2. El modo inicial del Paso 3 es un relieve de la lámina; la propuesta volumétrica conceptual requiere selección explícita.
+
+Los resultados asíncronos y la geometría se comprueban contra el archivo, marco, disciplina y revisión activos. Las ilustraciones empaquetadas de versiones anteriores ya no se reinstalan automáticamente, y los renders guardados compatibles quedan como opción, sin sustituir la vista técnica al procesar. Ver [validación y límites de v3.2](reports/continuidad-v3-2.md).
+
+## Cambios v3.1 · Importación de dibujos mecánicos
+
+La app separa vistas ortográficas y cotas de color antes de elegir entre revolución y extrusión. Permite seleccionar el contorno que se modelará y encuadrarlo en la comparación. Una vista complementaria de la misma escala puede proporcionar el ancho proporcional de extrusión; los círculos que coinciden con pestañas rectas pueden proponerse como taladros transversales reales, con opción de desactivarlos. Las líneas DXF de cotas y texto se excluyen de la selección automática cuando existen capas geométricas.
+
+Se mantienen las entradas PNG, JPG, WEBP, PDF y DXF. Esta mejora amplía los tipos de **dibujos** interpretados; no agrega importación DWG, STEP ni reconocimiento universal de planos. La escala debe calibrarse y la correspondencia entre vistas debe revisarse. No se leen automáticamente las cifras de las cotas. Ver [validación y límites de v3.1](reports/importacion-v3-1.md).
+
 ## Cambios v3.0 · Conjunto por componentes
 
 La nueva presentación mecánica **v3.0 · Conjunto por componentes** separa la sección en bridas, carcasa, tapa y cierre según los cambios de envolvente de la lámina. Los roles son propuestas revisables. El **Eje escalonado propuesto**, opcional, interpreta los límites emparejados del núcleo como un eje sin seccionar. El corte de regiones anterior y la envolvente cerrada siguen disponibles.
 
 El Paso 2 mantiene la proyección frontal alineada y la cortina. El visor permite seleccionar piezas por nombre, aislarlas y mostrar un **Despiece** reversible. El STL siempre exporta la posición ensamblada, aunque el visor muestre el despiece. El JSON conserva la geometría de origen y sus supuestos. Se mantienen los tornillos y rodamientos propuestos de la mejora anterior.
 
-La v3.0 es una aplicación estática de módulos ES. `npm run build` verifica la versión visible y las rutas locales y genera `dist/build-info.json`; `npm test` ejecuta las pruebas. No requiere instalar un compilador ni nuevas dependencias.
+La aplicación es estática de módulos ES. `npm run build` verifica la versión visible y las rutas locales y genera `dist/build-info.json`; `npm test` ejecuta las pruebas. No requiere instalar un compilador ni nuevas dependencias.
 
 Una sola sección no determina tolerancias, referencias de piezas o geometría oculta de fabricación. La interpretación de eje y los roles de los componentes deben revisarse. Ver [cambios y validación v3.0](reports/conjunto-v3-12.md).
 
