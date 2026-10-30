@@ -62,4 +62,9 @@ test('the real audit accounts for every proposal and recovers original pending a
   assert.equal(visualCases({},null).length,0);
   const changed=structuredClone(prediction);changed.objects.find(o=>o.id===review.cases[0].objectId).bbox[0]+=10;
   assert.equal(visualCases(changed,review).length,14);
+  const kitchen=current.openings.find(o=>o.objectIds.includes('semantic-8'));
+  assert.ok(kitchen&&kitchen.objectIds.includes('semantic-9'));
+  const audit=JSON.parse(readFileSync(new URL('../dist/data/openings-audit.json',import.meta.url)));
+  assert.equal(audit.geometryReviewCount,0);
+  assert.ok(audit.cases.filter(c=>c.category==='window').every(c=>c.reconstructedBboxIou>=.5));
 });

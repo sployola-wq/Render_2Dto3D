@@ -1,7 +1,7 @@
 {
-  "version": "3.3.2",
+  "version": "3.4.0",
   "format": "static-es-modules",
-  "modules": 46,
+  "modules": 56,
   "features": [
     "aligned-comparison",
     "mechanical-components",
@@ -28,6 +28,28 @@
     "observed-roof-elements",
     "registered-source-geometry",
     "source-view-camera",
-    "shared-source-face-boundaries"
+    "shared-source-face-boundaries",
+    "planar-boundary-fit",
+    "orbit-geometry-validation",
+    "explicit-closed-relief-fallback",
+    "contrast-relative-classification",
+    "ambiguous-route-confirmation",
+    "source-physical-volume",
+    "independent-physical-openings",
+    "unresolved-exterior-depth-guard",
+    "structural-interior-without-semantic-engine",
+    "local-visual-discipline-classification",
+    "live-furniture-recognition",
+    "interior-spatial-preview",
+    "regular-architectural-facades",
+    "local-facade-opening-candidates",
+    "orthographic-top-preview-default",
+    "recessed-source-glazing",
+    "multiview-drawing-classification",
+    "source-coordinate-detail-detection",
+    "nonexclusive-detector-fusion",
+    "editable-source-bound-plan",
+    "partial-geometry-review",
+    "explicit-conceptual-facades"
   ]
 }

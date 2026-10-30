@@ -6,11 +6,11 @@ Se inspeccionaron visualmente las 15 propuestas sin asociación del método ante
 
 | Medida | Anterior | Depurada |
 |---|---:|---:|
-| Cuerpos de puerta/ventana generados | 21 | 31 |
+| Cuerpos de puerta/ventana generados | 21 | 30 |
 | Propuestas sin soporte asociado | 15 | 0 |
 | Fragmentos conflictivos conocidos que llegan al 3D | 2 | 0 |
 | Fragmentos excluidos explícitamente | 0 | 2 |
-| Propuestas adicionales agrupadas en un cuerpo | 1 | 4 |
+| Propuestas adicionales agrupadas en un cuerpo | 1 | 5 |
 
 **Se resolvió la asociación de 15/15 propuestas. Esto no equivale a 15 geometrías correctas. Las seis ventanas de la revisión mantienen dudas de extensión, posición de jamba o desplazamiento de máscara.** La ventana vertical de cocina (semantic-8/9, fuera de las 15 iniciales) sigue dividida en dos cuerpos porque la máscara predice un tramo sólido intermedio. No se elimina ese posible machón a partir de la referencia.
 
@@ -18,12 +18,12 @@ Se inspeccionaron visualmente las 15 propuestas sin asociación del método ante
 
 | Propuesta | Clase | Diagnóstico visual | Asociación actual | Geometría pendiente |
 |---|---|---|---|---|
-| semantic-3 | Ventana | Fragmentación | Con soporte | Sí |
-| semantic-6 | Ventana | Encuentro perpendicular | Con soporte | Sí |
-| semantic-13 | Ventana | Fragmentación | Con soporte | Sí |
-| semantic-14 | Ventana | Eje / línea fina | Con soporte | Sí |
-| semantic-19 | Ventana | Eje / línea fina | Con soporte | Sí |
-| semantic-20 | Ventana | Fragmentación / eje | Con soporte | Sí |
+| semantic-3 | Ventana | Fragmentación | Con soporte | Revisar antes de uso constructivo |
+| semantic-6 | Ventana | Encuentro perpendicular | Con soporte | Revisar antes de uso constructivo |
+| semantic-13 | Ventana | Fragmentación | Con soporte | Revisar antes de uso constructivo |
+| semantic-14 | Ventana | Eje / línea fina | Con soporte | Revisar antes de uso constructivo |
+| semantic-19 | Ventana | Eje / línea fina | Con soporte | Revisar antes de uso constructivo |
+| semantic-20 | Ventana | Fragmentación / eje | Con soporte | Revisar antes de uso constructivo |
 | semantic-23 | Puerta | Referencia incompleta / apoyo corto | Con soporte | Revisar antes de uso constructivo |
 | semantic-24 | Puerta | Encuentro perpendicular | Con soporte | Revisar antes de uso constructivo |
 | semantic-29 | Puerta | Encuentro / extremos | Con soporte | Revisar antes de uso constructivo |
@@ -56,8 +56,8 @@ El criterio se mantiene en IoU de caja ≥ 0,50, con emparejamiento uno a uno. �
 
 | Clase | Cuerpos antes → después | Coincidencias antes → después | Sin coincidencia antes → después |
 |---|---:|---:|---:|
-| door | 6 → 14 | 4 → 9 | 2 → 5 |
-| window | 15 → 17 | 7 → 10 | 8 → 7 |
+| door | 6 → 14 | 4 → 10 | 2 → 4 |
+| window | 15 → 16 | 7 → 14 | 8 → 2 |
 
 ## Cambios del método
 

@@ -14,7 +14,7 @@ La reconstrucción recibe únicamente la detección seleccionada. La referencia 
 | IoU huella limpia / predicción original | 90,0 % |
 | IoU original / referencia inicial | 59,5 % |
 | IoU limpia / referencia inicial | 60,2 % |
-| Aberturas vinculadas a muros | 31 |
+| Aberturas vinculadas a muros | 30 |
 | Aberturas pendientes de revisión 2D | 0 |
 | Muebles/equipos mostrados con escala provisional | 51 |
 | Orientaciones propuestas a partir de un muro próximo | 14 |

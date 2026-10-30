@@ -22,6 +22,8 @@ import torch.nn.functional as F
 from cubicasa_model import hg_furukawa_original
 from symbol_repetition import refine_repeated_beds, refine_sanitary_conflicts
 from ultralytics import YOLO
+from drawing_input import read_drawing, normalize_drawing, content_bounds
+from detection_fusion import detail_tiles, merge_detections, fuse_semantics, supported_detail_detections
 
 STRUCTURE_SOURCE = 'https://github.com/CubiCasa/CubiCasa5k'
 OBJECT_SOURCE = 'https://github.com/REIkd/FYP-Floorplan'
@@ -81,10 +83,10 @@ class Engine:
     @torch.inference_mode()
     def predict(self, image_bytes):
         started = time.perf_counter()
-        image = ImageOps.exif_transpose(Image.open(io.BytesIO(image_bytes))).convert('RGB')
-        if image.width * image.height > 25_000_000:
-            raise ValueError('La imagen excede 25 millones de píxeles.')
+        image = read_drawing(image_bytes)
         natural_size = list(image.size)
+        image, preparation = normalize_drawing(image)
+        detail_image = image
         factor = min(1, 1400 / max(image.size))
         if factor < 1:
             image = image.resize((round(image.width * factor), round(image.height * factor)), Image.Resampling.LANCZOS)
@@ -134,14 +136,23 @@ class Engine:
                     child = hierarchy[0][child][0]
                 polygons.append({'id':f'wall-{len(polygons)+1}', 'outer':outer, 'holes':holes})
 
-        prediction = self.detector.predict(image, imgsz=640, conf=.10, iou=.45, device='cpu', verbose=False)[0]
         objects = []
-        for box in prediction.boxes:
-            raw_category = self.detector.names[int(box.cls.item())]
-            if raw_category == 'loadbearing_wall': continue  # segmentation owns walls
-            objects.append({'id':f'prediction-{len(objects)+1}', 'category':raw_category,
-                'bbox':[round(float(v),2) for v in box.xyxy[0].tolist()],
-                'confidence':round(float(box.conf.item()),4), 'source':'neural-detector', 'reviewRequired':True})
+        tiles = detail_tiles(*detail_image.size, content_bounds(detail_image))
+        jobs = [(image, (0, 0), (1, 1), 'neural-detector')]
+        jobs += [(detail_image.crop(b), b[:2], (width/detail_image.width, height/detail_image.height), 'neural-detail-tile') for b in tiles]
+        for tile, offset, scale, source in jobs:
+            prediction = self.detector.predict(tile, imgsz=640, conf=.10 if source=='neural-detector' else .30, iou=.45, device='cpu', verbose=False)[0]
+            for box in prediction.boxes:
+                raw_category = self.detector.names[int(box.cls.item())]
+                if raw_category == 'loadbearing_wall': continue
+                local = [float(v) for v in box.xyxy[0].tolist()]
+                # Do not extrude objects cut by an artificial tile boundary.
+                if source=='neural-detail-tile' and (local[0]<3 or local[1]<3 or local[2]>tile.width-3 or local[3]>tile.height-3): continue
+                mapped = [(v+offset[i%2])*scale[i%2] for i,v in enumerate(local)]
+                objects.append({'id':f'prediction-{len(objects)+1}', 'category':raw_category,
+                    'bbox':[round(v,2) for v in mapped], 'confidence':round(float(box.conf.item()),4),
+                    'source':source, 'sourceTile':[offset[0],offset[1],tile.width,tile.height], 'reviewRequired':True})
+        objects = merge_detections(objects, width, height)
 
         regions, semantic_objects = [], []
         icon_categories = {1:'window',2:'door',3:'wardrobe',4:'appliance',5:'toilet',6:'sink',9:'bathtub'}
@@ -154,21 +165,24 @@ class Engine:
                 regions.append({'category':category,'bbox':bbox,'areaPixels':int(area),'confidence':round(confidence,4),'source':'structural-segmentation'})
                 semantic_objects.append({'id':f'semantic-{len(semantic_objects)+1}','category':category,'bbox':bbox,'confidence':round(confidence,4),'source':'cubicasa-segmentation','reviewRequired':True})
         raw_objects = objects
+        objects,detail_review = supported_detail_detections(objects,semantic_objects)
         refined_objects, repetition = refine_repeated_beds(image, objects, semantic_objects)
         def iou(a,b):
             overlap=max(0,min(a[2],b[2])-max(a[0],b[0]))*max(0,min(a[3],b[3])-max(a[1],b[1]))
             return overlap / max(1,(a[2]-a[0])*(a[3]-a[1])+(b[2]-b[0])*(b[3]-b[1])-overlap)
         refined_objects, semantic_objects, sanitary_changes = refine_sanitary_conflicts(image, refined_objects, semantic_objects)
-        fixtures=[o for o in semantic_objects if o['category'] not in ['door','window'] and o['confidence']>=.5]
-        objects=[o for o in refined_objects if o['category'] not in ['door','window','toilet','sink','bathtub','wardrobe','cupboard'] and not any(iou(o['bbox'],f['bbox'])>.35 for f in fixtures)]
         review_only=[o for o in semantic_objects if o['category'] in ['wardrobe','appliance'] and (min(o['bbox'][2]-o['bbox'][0],o['bbox'][3]-o['bbox'][1])<max(3,width*.01) or (o['bbox'][2]-o['bbox'][0])*(o['bbox'][3]-o['bbox'][1])<width*height*.0005)]
         excluded={o['id'] for o in review_only}
-        objects.extend(o for o in semantic_objects if o['id'] not in excluded)
+        objects,conflicts=fuse_semantics(refined_objects, [o for o in semantic_objects if o['id'] not in excluded], width, height,return_review=True)
+        # Unique IDs after merging sources are part of the editable/exported model.
+        objects=[dict(o,id=f'object-{i+1}') for i,o in enumerate(objects)]
         return {'schemaVersion':2, 'imageSha256':hashlib.sha256(image_bytes).hexdigest(),
             'width':width, 'height':height, 'naturalSize':natural_size, 'walls':[], 'openings':[],
             'wallPolygons':polygons, 'objects':objects, 'rawObjectDetections':raw_objects, 'structuralRegions':regions,
-            'method':'cubicasa-hourglass-and-yolov8-floorplan', 'provenance':self.provenance,
-            'elapsedSeconds':round(time.perf_counter()-started,3), 'minimumStoredConfidence':.10,'finishRegions':finish_regions,'symbolRefinement':repetition,'sanitaryRefinement':sanitary_changes,'reviewOnlyObjects':[dict(o,reason='Small fixture fragment; not extruded as tall furniture') for o in review_only]}
+            'method':'cubicasa-hourglass-and-yolov8-floorplan', 'provenance':{**self.provenance,
+                'fusion':'Source-coordinate NMS; unpaired detector doors, windows and fixtures retained.',
+                'preparation':preparation,'detailTiles':len(tiles),'coordinateFrame':'original-image-scaled-to-analysis'},
+            'elapsedSeconds':round(time.perf_counter()-started,3), 'minimumStoredConfidence':.10,'finishRegions':finish_regions,'symbolRefinement':repetition,'sanitaryRefinement':sanitary_changes,'reviewOnlyObjects':[dict(o,reason='Small fixture fragment; not extruded as tall furniture') for o in review_only]+conflicts+detail_review}
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

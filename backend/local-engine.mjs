@@ -21,9 +21,11 @@ export function createLocalEngine({root,port=4174}={}){
     });
   }
   readyPromise=start();
+  let restarting=false;
+  async function ensure(){await readyPromise;if(await probe())return true;if(!child&&!restarting){restarting=true;readyPromise=start().finally(()=>{restarting=false;});}return await readyPromise;}
   return {
-    async health(){await readyPromise;const ready=await probe();return {ready,engine:'local-cpu',schemaVersion:2,status:ready?'ready':state,detail:ready?'Reconocimiento local de estructura, aberturas y mobiliario.':'Reconocimiento de mobiliario no disponible. Instala el motor local; los contornos por sí solos no generan un interior amueblado.'};},
-    async analyze(bytes,mime,signal){await readyPromise;if(!await probe())return {status:503,data:{error:'El motor de reconocimiento local no está disponible. No se ha generado mobiliario ficticio.'}};try{const response=await fetch(base+'/api/analyze',{method:'POST',headers:{'Content-Type':mime},body:bytes,signal:signal?AbortSignal.any([signal,AbortSignal.timeout(180000)]):AbortSignal.timeout(180000)});return {status:response.status,data:await response.json()};}catch{return {status:503,data:{error:'No se pudo completar el reconocimiento local. Conserva el plano y vuelve a intentar.'}};}},
+    async health(){const ready=await ensure();return {ready,engine:'local-cpu',schemaVersion:2,status:ready?'ready':state,detail:ready?'Reconocimiento local de estructura, aberturas y mobiliario.':'Reconocimiento de mobiliario no disponible. Instala el motor local; los contornos por sí solos no generan un interior amueblado.'};},
+    async analyze(bytes,mime,signal,route='/api/analyze'){await readyPromise;if(!await probe())return {status:503,data:{error:'El motor de reconocimiento local no está disponible. Ejecuta la instalación local para reconocer mobiliario.'}};try{const response=await fetch(base+route,{method:'POST',headers:{'Content-Type':mime},body:bytes,signal:signal?AbortSignal.any([signal,AbortSignal.timeout(180000)]):AbortSignal.timeout(180000)});return {status:response.status,data:await response.json()};}catch{return {status:503,data:{error:'No se pudo completar el reconocimiento local. Conserva el plano y vuelve a intentar.'}};}},
     stop(){child?.kill('SIGTERM');}
   };
 }

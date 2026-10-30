@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {distance,polygonMetrics,boundsOf,geometryBounds,pixelToWorld,worldToPixel,dxfPaths,validSupportURL,vectorSVG,isSimplePolygon} from '../dist/technical-geometry.js';
+import {distance,polygonMetrics,boundsOf,geometryBounds,pixelToWorld,worldToPixel,dxfPaths,parseDimensionText,validSupportURL,vectorSVG,isSimplePolygon} from '../dist/technical-geometry.js';
+import {createProjectPackage,restoreProjectPackage} from '../dist/project-package.js';
 
 test('measurement calibration uses Euclidean length and squares scale for area',()=>{
   assert.equal(distance([0,0],[3,4],.002),.01);
@@ -44,4 +45,48 @@ test('native CAD import makes paired contours into a wall band and preserves the
   assert.equal(geometry.wallPolygons.length,1);assert.deepEqual(geometry.wallPolygons[0].holes,[inner.points]);assert.equal(geometry.provenance.selectedLayers,'wall-name-filter');
   const isolated=cadWallGeometry([{closed:true,points:outer.points}],100,60,2);
   assert.equal(isolated.wallPolygons.length,4);assert.ok(isolated.wallPolygons.every(p=>polygonMetrics(p.outer).area<300));
+});
+
+test('DXF dimension and text entities parse physical values, diameters and spans while keeping non-numeric text unsupported',()=>{
+  assert.deepEqual(parseDimensionText('Ø 45.5 mm'),{raw:'Ø 45.5 mm',rawText:'Ø 45.5 mm',value:45.5,unit:'mm',mm:45.5,kind:'diameter',diameter:true,radius:false});
+  assert.deepEqual(parseDimensionText('R12 cm'),{raw:'R12 cm',rawText:'R12 cm',value:12,unit:'cm',mm:120,kind:'radius',diameter:false,radius:true});
+  const doc={
+    header:{$INSUNITS:0},
+    entities:[
+      {type:'LWPOLYLINE',shape:true,vertices:[{x:0,y:0},{x:200,y:0},{x:200,y:80},{x:0,y:80}]},
+      {type:'DIMENSION',text:'200 mm',linearOrAngularPoint1:{x:0,y:0},linearOrAngularPoint2:{x:200,y:0},anchorPoint:{x:100,y:-15}},
+      {type:'MTEXT',text:'\\A1;Ø24'},
+      {type:'TEXT',text:'VISTA FRONTAL'}
+    ]
+  };
+  const result=dxfPaths(doc);
+  assert.equal(result.dimensions.length,2);
+  assert.equal(result.dimensions[0].mm,200);
+  assert.equal(result.dimensions[0].span,200);
+  assert.equal(result.dimensions[1].diameter,true);
+  assert.equal(result.dimensions[1].mm,24);
+});
+
+test('project package serialises and restores sheet, calibration, measurements and discipline records with SHA-256 verification',()=>{
+  const sha='a'.repeat(64);
+  const pkg=createProjectPackage({
+    asset:{name:'pieza.png',kind:'image',identity:sha,page:1},
+    sourceDataUrl:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+    width:800,
+    height:600,
+    step:2,
+    preparation:{grayscale:true,vectorWidth:2.5,measureUnit:'mm'},
+    calibration:{imageSha256:sha,metersPerPixel:0.002,source:'user-calibrated'},
+    measurements:[[[10,20],[110,20]]],
+    boundary:[[0,0],[100,0],[100,80],[0,80]],
+    discipline:{routingMode:'mechanical',domain:'mechanical',records:{mechanical:{schema:1,domain:'mechanical',params:{widthMm:400}}}}
+  });
+  const restored=restoreProjectPackage(JSON.stringify(pkg));
+  assert.equal(restored.asset.identity,sha);
+  assert.equal(restored.step,2);
+  assert.equal(restored.preparation.measureUnit,'mm');
+  assert.equal(restored.calibration.metersPerPixel,0.002);
+  assert.equal(restored.measurements.length,1);
+  assert.equal(restored.discipline.records.mechanical.params.widthMm,400);
+  assert.throws(()=>restoreProjectPackage(JSON.stringify({...pkg,calibration:{imageSha256:'b'.repeat(64),metersPerPixel:0.002}})),/calibración/);
 });

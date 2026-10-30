@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {inflateSync} from 'node:zlib';
-import {analyzeEngineeringDrawing,drawingFromEngineeringView,engineeringExtrusion,engineeringInk,engineeringCADPaths} from '../dist/engineering-drawing.js';
+import {analyzeEngineeringDrawing,drawingFromEngineeringView,engineeringExtrusion,engineeringInk,engineeringCADPaths,detectDrawingDimensions} from '../dist/engineering-drawing.js';
 import {drawingEvidence} from '../dist/drawing-routing.js';
 import {extractDrawing} from '../dist/discipline-analysis.js';
 import {buildDisciplineModel,modelSTL} from '../dist/discipline-models.js';
@@ -110,4 +110,106 @@ test('display grayscale, paper cleanup and inversion cannot change the geometry 
  const filtered=grayCopy(original),inverted={...filtered,data:Uint8ClampedArray.from(filtered.data,(v,i)=>i%4===3?v:255-v)};
  for(const im of[filtered,inverted]){const input={canvas:canvas(im),analysisCanvas:canvas(original)},a=analyzeEngineeringDrawing(geometrySource(input).getContext('2d').getImageData());assert.deepEqual(a.views.map(v=>v.bounds),baseline.views.map(v=>v.bounds));assert.equal(engineeringExtrusion(original,a,a.selectedId).holes.length,2);}
  assert.throws(()=>geometrySource({canvas:canvas(filtered),analysisCanvas:{width:1,height:2}}),/marco/);
+});
+
+test('stepped companion orthographic view produces a multi-segment stepped 3D extrusion',()=>{
+  const width=420,height=320,data=new Uint8ClampedArray(width*height*4).fill(255),gray=[92,92,92];
+  const dot=(x,y,color=gray,r=.7)=>{for(let yy=Math.floor(y-r);yy<=y+r;yy++)for(let xx=Math.floor(x-r);xx<=x+r;xx++)if(xx>=0&&yy>=0&&xx<width&&yy<height&&Math.hypot(xx-x,yy-y)<=r+.3)data.set([...color,255],(yy*width+xx)*4);};
+  const line=(a,b,color=gray)=>{const n=Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])*2);for(let i=0;i<=n;i++)dot(a[0]+(b[0]-a[0])*i/n,a[1]+(b[1]-a[1])*i/n,color);};
+  const ring=(pts,color=gray)=>pts.forEach((p,i)=>line(p,pts[(i+1)%pts.length],color));
+  // Stepped companion front view: wide top (y=30..110, x=45..115 -> width 70) and narrower bottom (y=110..250, x=60..100 -> width 40)
+  ring([[45,30],[115,30],[115,110],[100,110],[100,250],[60,250],[60,110],[45,110]]);
+  // Thin curved side profile (y=30..250)
+  const inner=Array.from({length:111},(_,i)=>{const y=30+i*2;return [225+(y>70&&y<210?52*Math.sin((y-70)/140*Math.PI):0),y];});
+  ring([...inner,...inner.map(([x,y])=>[x+8,y]).reverse()]);
+  const image={width,height,data},analysis=analyzeEngineeringDrawing(image),d=drawingFromEngineeringView(image,analysis);
+  d.extrusion=engineeringExtrusion(image,analysis,d.engineeringView);
+  assert.ok(d.extrusion.steppedSegments?.length>=2);
+  const widths=d.extrusion.steppedSegments.map(s=>s.widthPixels);
+  assert.ok(Math.max(...widths)-Math.min(...widths)>=20);
+  const built=buildDisciplineModel({domain:'mechanical',params,drawing:d,profiles:d.profiles});
+  assert.ok(built.group.userData.engineeringExtrusion.steppedSegments>=2);
+  assert.equal(built.parts,built.group.userData.engineeringExtrusion.steppedSegments);
+  built.dispose();
+});
+
+test('detectDrawingDimensions finds witness-capped raster dimension spans and pairs DXF dimension values for scale',()=>{
+  const image=sheet(),analysis=analyzeEngineeringDrawing(image);
+  const detected=detectDrawingDimensions(image,analysis,{dxfDimensions:[{raw:'220 mm',value:220,unit:'mm',mm:220,diameter:false,radius:false,spanPixels:220}]});
+  assert.ok(detected.spans.length>=1);
+  assert.ok(detected.spans.some(s=>s.axis==='y'&&Math.abs(s.spanPixels-220)<=4));
+  assert.ok(detected.suggestedScale);
+  assert.ok(Math.abs(detected.suggestedScale.metersPerPixel-0.001)<1e-6);
+});
+
+test('unrelated closed views with matching sizes but displaced endpoints do not supply an extrusion depth',()=>{
+ const image=sheet(),copy=image.data.slice(),w=image.width;
+ for(let y=0;y<image.height;y++)for(let x=0;x<180;x++)image.data.set([255,255,255,255],(y*w+x)*4);
+ for(let y=0;y<image.height-40;y++)for(let x=0;x<180;x++)image.data.set(copy.subarray((y*w+x)*4,(y*w+x)*4+4),((y+40)*w+x)*4);
+ const a=analyzeEngineeringDrawing(image);assert.ok(a.views.length>=2);assert.equal(a.multiView,false);assert.equal(engineeringExtrusion(image,a,a.selectedId),null);
+});
+
+test('sheet-framed multi-view flanged housing drawing strips outer frame, pairs vertical section A-A with plan view, and builds compound 3D housing',()=>{
+  const width=285,height=197,data=new Uint8ClampedArray(width*height*4).fill(255),dark=[40,40,40],thin=[215,215,215];
+  const dot=(x,y,color=dark,r=.75)=>{for(let yy=Math.floor(y-r);yy<=y+r;yy++)for(let xx=Math.floor(x-r);xx<=x+r;xx++)if(xx>=0&&yy>=0&&xx<width&&yy<height&&Math.hypot(xx-x,yy-y)<=r+.25)data.set([...color,255],(yy*width+xx)*4);};
+  const line=(a,b,color=dark,r=.75)=>{const n=Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])*2);for(let i=0;i<=n;i++)dot(a[0]+(b[0]-a[0])*i/n,a[1]+(b[1]-a[1])*i/n,color,r);};
+  const ring=(pts,color=dark,r=.75)=>pts.forEach((p,i)=>line(p,pts[(i+1)%pts.length],color,r));
+  const circle=(cx,cy,rad,color=dark)=>{ring(Array.from({length:72},(_,i)=>[cx+rad*Math.cos(i*Math.PI/36),cy+rad*Math.sin(i*Math.PI/36)]),color);};
+
+  // Closed outer double sheet border frame
+  ring([[3,3],[281,3],[281,193],[3,193]],dark,1.1);
+  ring([[9,9],[275,9],[275,187],[9,187]],dark,.9);
+
+  // Top-left vertical section view A-A (x: 34..102, y: 25..89) with wide bottom flange, vertical barrel, sloped top cut, and side boss
+  ring([
+    [34,89],[34,80],[48,80],[48,60],[40,60],[40,38],[48,38],[48,25],
+    [60,25],[87,34],[87,56],[94,56],[94,68],[87,68],[87,80],[102,80],[102,89]
+  ],dark,.9);
+  // Internal bore walls in section view
+  line([55,26],[55,89],dark,.8);
+  line([80,32],[80,89],dark,.8);
+  circle(67.5,49,9,dark);
+  // Thin gray dimension/witness lines around section view
+  line([22,25],[34,25],thin,.5);line([22,89],[34,89],thin,.5);line([24,25],[24,89],thin,.5);
+
+  // Bottom-left aligned square plan view (x: 34..102, y: 105..172) with 4 corner bolt holes and central concentric circles
+  ring([[34,105],[102,105],[102,172],[34,172]],dark,.9);
+  circle(68,138.5,19.5,dark);
+  circle(68,138.5,13,dark);
+  for(const [bx,by] of [[42,113],[94,113],[42,164],[94,164]])circle(bx,by,3.5,dark);
+
+  // Right-side isometric reference drawing (should not prevent pairing of the left orthographic views)
+  ring([[168,24],[252,24],[262,174],[168,174]],dark,.85);
+
+  const image={width,height,data};
+  const extracted=extractDrawing(image);
+  // Sheet border must be stripped so the whole page is not filled as one giant block
+  assert.ok(extracted.bounds.width<width*.92||extracted.bounds.height<height*.92);
+
+  const analysis=analyzeEngineeringDrawing(image);
+  assert.equal(analysis.multiView,true);
+  assert.equal(analysis.recommendedOrientation,'vertical');
+  assert.ok(analysis.compoundHousing);
+  assert.equal(analysis.compoundHousing.boltHoles.length,4);
+  assert.equal(analysis.compoundHousing.bosses.length,4);
+
+  const evidence=drawingEvidence(extracted,{engineering:analysis,image});
+  assert.equal(evidence.domain,'mechanical');
+  assert.equal(evidence.orientation,'vertical');
+
+  const d=drawingFromEngineeringView(image,analysis,analysis.selectedId,{holes:true});
+  assert.ok(d.compoundHousing);
+  const built=buildDisciplineModel({
+    domain:'mechanical',
+    params:{...params,operation:'revolve',orientation:'vertical',representation:'assembly',widthMm:140},
+    drawing:d,
+    section:d.profiles[0],
+    profiles:d.profiles,
+    axis:Math.round(d.compoundHousing.barrelCx)
+  });
+  const comps=built.group.userData.mechanicalAssembly?.components??[];
+  assert.equal(comps.length,3);
+  assert.deepEqual(comps.map(c=>c.id),['cross-ports','housing','base-flange']);
+  assert.ok(modelSTL(built.group).includes('facet normal'));
+  built.dispose();
 });

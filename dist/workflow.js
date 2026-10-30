@@ -5,6 +5,11 @@ import { createPresentationStore, canRestorePresentation } from './presentation-
 import { estimateReferenceRegistration, registrationFromBounds } from './reference-surfaces.js';
 import { refineStructure } from './structure-evidence.js';
 import { summarizeAnalysis } from './analysis-quality.js';
+import {applyPlanEdits,objectAt} from './plan-edits.js';
+import {CATEGORY} from './evaluation.js';
+import {geometryReview,renderGeometryReview} from './drawing-review.js';
+import {classifyDrawingAsset} from './drawing-classification.js';
+import {spatialPreviewCamera} from './render-cameras.js';
 import * as THREE from 'three';
 import { blueprintBridge as bridge } from './app.js?v=5';
 import { createAppearanceLayer } from './appearance-3d.js';
@@ -12,6 +17,7 @@ import { fitImageSize, bindFileDrop, zoomView } from './workspace-ui.js';
 import { enhanceBlueprintPixels, FINISH_PRESETS, createRenderRecord } from './blueprint-preprocess.js';
 import { createCalibration, restoreCalibration } from './calibration.js';
 import { SAMPLE } from './sample.js?v=4';
+import { createProjectPackage, restoreProjectPackage } from './project-package.js';
 import { distance, polygonMetrics, geometryBounds, pointOnCanvas, pixelToWorld, worldToPixel, validSupportURL, vectorSVG, dxfPaths, boundsOf, isSimplePolygon, cadWallGeometry } from './technical-geometry.js';
 
 const $=id=>document.getElementById(id), readStore=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fallback;}catch{return fallback;}},saveStore=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value));}catch{message('El navegador no permite guardar las preferencias. Se aplican en esta sesión.');}};
@@ -48,16 +54,19 @@ function scale(){return discipline.active?discipline.metersPerPixel:model.calibr
 function distanceLabel(value){return $('measureUnit').value==='mm'?`${fmt(value*1000,0)} mm`:`${fmt(value)} m`;}
 function setBusy(busy){
   model.busy=busy;
+  for(const el of document.querySelectorAll('#planCorrections button,#planCorrections select'))el.disabled=busy||!model.processed;
   $('boardStage').setAttribute('aria-busy',String(busy));
-  for(const id of ['replacePlanFiles','newProjectButton','flowFiles','pdfPage','loadExample','loadExteriorExample','loadMechanicalExample','chooseBoardFiles'])$(id).disabled=busy;
+  for(const id of ['replacePlanFiles','newProjectButton','openProjectButton','flowFiles','pdfPage','loadExample','loadExteriorExample','loadMechanicalExample','chooseBoardFiles'])if($(id))$(id).disabled=busy;
+  if($('saveProjectButton'))$('saveProjectButton').disabled=busy||!model.asset;
   for(const id of ['processVectors','vectorWidth','grayscale','invertContrast','flowCalibrate','rulerToggle','areaToggle','closeArea','clearMeasurements','dimensionToggle','measureUnit','resetBoard','paperCleanup','sourcePreview','boardZoomIn','boardZoomOut','boardPan','downloadClean'])$(id).disabled=busy||!model.asset;
   $('processVectors').disabled=busy||!model.asset||discipline.routingBlocked;
-  $('advance3d').disabled=busy||!model.processed;
+  $('advance3d').disabled=busy||!model.processed||!!model.reviewOnly;
   for(const id of ['finishPreset','finishPrompt','importCGI','renderSource','proceedStep2'])$(id).disabled=busy||!model.processed;
-  $('generateCGI').disabled=busy||!model.processed||!cgiConfigured;
+  $('generateCGI').disabled=busy||!model.processed||!cgiConfigured||!!model.reviewOnly;
+  $('importCGI').disabled=busy||!model.processed||!!model.reviewOnly;
   $('vectorOverlay').disabled=busy||!model.processed;
   $('downloadVectors').disabled=busy||!model.vectors;
-  for(const el of document.querySelectorAll('.flow-step'))el.disabled=busy||(['2','3'].includes(el.dataset.step)&&!model.processed);
+  for(const el of document.querySelectorAll('.flow-step'))el.disabled=busy||(['2','3'].includes(el.dataset.step)&&!model.processed)||(el.dataset.step==='3'&&!!model.reviewOnly);
   for(const el of $('fileQueue').querySelectorAll('button'))el.disabled=busy;discipline.ui();
 }
 function fitBoard(){
@@ -75,12 +84,13 @@ function fitBoard(){
 new ResizeObserver(fitBoard).observe($('boardStage'));
 
 function setStep(step){
-  if(model.busy||step>1&&!model.processed)return;
+  if(model.busy||step>1&&!model.processed||step===3&&model.reviewOnly)return;
+  if(step!==2&&model.mode==='edit-plan'){model.mode=null;model.points=[];}
   if(document.body.classList.contains('desk-focus'))$('focusDesk').click();
   const previousStep=model.step;model.step=step;document.body.dataset.workflowStep=String(step);if(previousStep!==step)document.querySelector('.flow-sidebar').scrollTop=0;$('workflow').hidden=step===3;$('step3Host').hidden=step!==3||discipline.active;$('discipline3Host').hidden=step!==3||!discipline.active;discipline.show(step===3&&discipline.active);
   for(const el of document.querySelectorAll('.flow-step')){const selected=Number(el.dataset.step)===step;el.classList.toggle('active',selected);el.classList.toggle('done',Number(el.dataset.step)<step);if(selected)el.setAttribute('aria-current','step');else el.removeAttribute('aria-current');}
   if(step===3&&discipline.active){appearance.restore();appearanceApplied=false;extensionGroup.visible=false;toolbar.hidden=true;return;}
-  if(step===3){bridge.show3D();refreshThree();syncAppearance(true);return;}
+  if(step===3){updateAnalysisQuality(bridge.snapshot());bridge.show3D();refreshThree();syncAppearance(true);return;}
   appearance.restore();appearanceApplied=false;
   $('flowTitle').innerHTML=step===1?'Todo comienza<br>con un plano.':'Del trazo<br>al espacio.';
   $('flowDescription').textContent=step===1?'Prepara tu lámina, define una escala y transforma el trazo en espacio.':'Desliza la cortina para comprobar la alineación de la geometría sobre el plano.';
@@ -90,14 +100,15 @@ function setStep(step){
   $('comparatorControls').hidden=!model.asset;
   $('comparatorControls').inert=step!==2;
   if(discipline.active)$('processVectors').hidden=true;
+  $('planCorrections').hidden=discipline.active||step!==2;
   $('step2Controls').hidden=step!==2;const cgiDetails=$('step2Controls').querySelector('details');if(step===2&&discipline.domain==='exterior'&&cgiDetails)cgiDetails.open=true;$('generateCGI').textContent=discipline.domain==='exterior'?'✦ Generar fachada con IA':'✦ Generar con OpenAI';$('fileQueue').hidden=step!==1||model.queue.length<2;$('replacePlanFiles').hidden=step!==1;
   $('proceedStep2').hidden=step!==1||!model.processed;
   $('extractionStatus').hidden=step!==1||!model.processed;
   $('downloadClean').hidden=step!==1;
   render.hidden=step!==2||model.sourceOnly;$('curtainLine').hidden=step!==2||!model.compare;
-  $('renderMode').textContent=discipline.active?'Vista procesada':'Render cenital';$('renderSource').querySelector('[value="technical"]').textContent=discipline.active?'Lámina completa · materiales y cotas':'Render local ambientado';
+  $('renderMode').textContent=discipline.active?'Vista procesada':'Render cenital';$('renderSource').querySelector('[value="technical"]').textContent=discipline.active?'Lámina preparada · materiales y cotas':'Render cenital 3D · ambientado';
   if(discipline.active)$('flowDescription').textContent=step===1?'Define la disciplina, revisa el perfil y especifica los parámetros del modelo.':'Compara la lámina con su interpretación técnica. Revisa contornos y supuestos antes de ir a 3D.';
-  drawBoard();applyCurtain();requestAnimationFrame(fitBoard);
+  drawBoard();applyCurtain();updatePresentationLabel();requestAnimationFrame(fitBoard);
 }
 for(const el of document.querySelectorAll('.flow-step'))el.onclick=()=>setStep(Number(el.dataset.step));
 $('backToPlan').onclick=()=>setStep(1);$('resetBoard').onclick=()=>{model.view={zoom:1,panX:0,panY:0};fitBoard();message('Plano completo ajustado a la mesa, sin recortes.');};
@@ -106,9 +117,21 @@ function drawQueue(){
   $('fileQueue').replaceChildren(...model.queue.map(asset=>{const b=document.createElement('button');b.type='button';b.classList.toggle('active',asset===model.asset);b.setAttribute('aria-label',`Abrir ${asset.name}`);b.setAttribute('aria-pressed',String(asset===model.asset));const span=document.createElement('span');span.textContent=asset.name;const small=document.createElement('small');small.textContent=asset.kind.toUpperCase();b.append(span,small);b.disabled=model.busy;b.onclick=()=>selectAsset(asset);return b;}));
 }
 async function decodeImage(blob){const image=new Image(),url=URL.createObjectURL(blob);try{image.src=url;await image.decode();if(image.naturalWidth<64||image.naturalHeight<64)throw new Error('La imagen debe medir al menos 64 × 64 píxeles.');if(image.naturalWidth*image.naturalHeight>25000000)throw new Error('La imagen supera 25 millones de píxeles.');return image;}finally{URL.revokeObjectURL(url);}}
+function purgeAssetCache(hash){
+  if(!hash)return;
+  try{
+    for(const d of ['interior','exterior','mechanical','structure'])localStorage.removeItem(`prodalam.discipline.v1.${hash}.${d}`);
+    localStorage.removeItem(`prodalam.discipline.v1.${hash}`);
+    localStorage.removeItem(`prodalam.scale.${hash}`);
+    localStorage.removeItem(`blueprint.scale.v1.${hash}`);
+    localStorage.removeItem(`prodalam.edits.${hash}`);
+  }catch{}
+}
 async function addFiles(files){
   if(model.busy)return;
   const accepted=[],errors=[];
+  const oldAssets=model.queue.splice(0,model.queue.length);
+  for(const old of oldAssets){if(old.identity)purgeAssetCache(old.identity);old.pdf?.destroy().catch(()=>{});}
   for(const file of [...files].slice(0,20)){
     const ext=file.name.split('.').pop().toLowerCase(),kind=['png','jpg','jpeg','webp'].includes(ext)?'image':ext;
     if(!['image','pdf','dxf'].includes(kind)){errors.push(`${file.name}: formato no compatible`);continue;}
@@ -128,7 +151,8 @@ $('confirmNewProject').onclick=()=>{$('newProjectDialog').close();resetProject()
 function resetProject(){
   const oldAssets=model.queue,hashes=new Set(oldAssets.map(a=>a.identity).filter(Boolean));
   if(model.processedHash)hashes.add(model.processedHash);
-  for(const hash of hashes)try{for(const d of ['interior','exterior','mechanical','structure'])localStorage.removeItem(`prodalam.discipline.v1.${hash}.${d}`);localStorage.removeItem(`prodalam.discipline.v1.${hash}`);localStorage.removeItem(`prodalam.scale.${hash}`);localStorage.removeItem(`blueprint.scale.v1.${hash}`);}catch{}
+  for(const hash of hashes)purgeAssetCache(hash);
+  try{for(const k of Object.keys(localStorage))if(/^(?:prodalam\.(?:discipline\.v1|scale|edits)|blueprint\.scale\.v1)\./.test(k))localStorage.removeItem(k);}catch{}
   Object.assign(model,{step:1,queue:[],asset:null,source:null,selection:model.selection+1,version:model.version+1,processed:false,processedHash:null,spatialRender:null,boundary:[],mode:null,points:[],measurements:[],calibration:null,bounds:null,vectors:null,render:null,compare:true,threeRuler:false,busy:false,view:{zoom:1,panX:0,panY:0},panEnabled:false,sourceOnly:false,presentation:null,renderRecord:null});
   discipline.show(false);discipline.reset();document.body.dataset.drawingDomain='interior';appearance.restore();appearanceApplied=false;appearanceImage=null;appearancePixels=null;resetAppearanceOptions();
   lastCalibration=null;textureModel=null;resetPresentation();$('paperCleanup').checked=false;$('vectorOverlay').checked=false;$('sourcePreview').value='prepared';$('boardPan').setAttribute('aria-pressed','false');
@@ -159,22 +183,27 @@ async function selectAsset(asset){
       const page=await asset.pdf.getPage(asset.page),base=page.getViewport({scale:1}),viewport=page.getViewport({scale:Math.min(2,1400/Math.max(base.width,base.height))});
       source=document.createElement('canvas');source.width=Math.max(64,Math.round(viewport.width));source.height=Math.max(64,Math.round(viewport.height));await page.render({canvasContext:source.getContext('2d'),viewport}).promise;
     }else if(asset.kind==='dxf'){
-      if(!asset.dxf){const Parser=(await import('./vendor/dxf-parser.js')).default;asset.dxf=dxfPaths(new Parser().parseSync(await asset.file.text()));}
+      if(!asset.dxf){const Parser=(await import('./vendor/dxf-parser.js')).default;asset.dxfText=asset.dxfText??await asset.file.text();asset.dxf=dxfPaths(new Parser().parseSync(asset.dxfText));}
       dxf=asset.dxf;source=document.createElement('canvas');const b=dxf.bounds,f=1280/Math.max(b.width,b.height,1);source.width=Math.max(64,Math.ceil(b.width*f)+60);source.height=Math.max(64,Math.ceil(b.height*f)+60);
-      asset.mappedPaths=dxf.paths.map(p=>({...p,points:p.points.map(([x,y])=>[30+(x-b.x0)*f,30+(b.y1-y)*f])}));asset.cadMetersPerPixel=({1:.0254,2:.3048,4:.001,5:.01,6:1,7:1000}[dxf.units]??null);if(asset.cadMetersPerPixel)asset.cadMetersPerPixel/=f;
+      asset.mappedPaths=dxf.paths.map(p=>({...p,points:p.points.map(([x,y])=>[30+(x-b.x0)*f,30+(b.y1-y)*f])}));
+      asset.mappedDimensions=(dxf.dimensions??[]).map(d=>({...d,position:[30+(d.position[0]-b.x0)*f,30+(b.y1-d.position[1])*f],points:d.points?d.points.map(([x,y])=>[30+(x-b.x0)*f,30+(b.y1-y)*f]):null,spanPixels:d.span!=null?d.span*f:null}));
+      asset.cadMetersPerPixel=({1:.0254,2:.3048,4:.001,5:.01,6:1,7:1000}[dxf.units]??null);if(asset.cadMetersPerPixel)asset.cadMetersPerPixel/=f;
       const ctx=source.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,source.width,source.height);ctx.strokeStyle='#1c2933';ctx.lineWidth=1;for(const p of asset.mappedPaths){ctx.beginPath();p.points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));if(p.closed)ctx.closePath();ctx.stroke();}
     }else source=asset.image??await decodeImage(asset.file);
     if(token!==model.selection)return;
     $('boardFrame').hidden=false;$('boardEmpty').hidden=true;$('boardStage').classList.remove('is-empty');
     resetPresentation();$('curtainRange').value='50';for(const id of ['rulerToggle','areaToggle'])$(id).setAttribute('aria-pressed','false');$('boardFrame').classList.remove('measuring');model.view={zoom:1,panX:0,panY:0};model.panEnabled=false;$('boardPan').setAttribute('aria-pressed','false');$('vectorOverlay').checked=false;$('sourcePreview').value='prepared';$('paperCleanup').checked=false;
-    model.asset=asset;model.processedHash=null;model.source=source;model.calibration=null;model.measurements=[];model.points=[];model.mode=null;model.vectors=null;model.bounds=null;model.render=null;model.spatialRender=null;model.boundary=[];model.processed=false;model.version++;
+    model.asset=asset;model.reviewOnly=null;model.processedHash=null;model.source=source;model.calibration=null;model.measurements=[];model.points=[];model.mode=null;model.vectors=null;model.bounds=null;model.render=null;model.spatialRender=null;model.topRender=null;model.boundary=[];model.processed=false;model.version++;
     $('grayscale').checked=false;$('invertContrast').checked=false;$('vectorWidth').value='1';$('vectorWidthValue').textContent='1,0 px';
     drawQueue();$('rulerResult').textContent='Selecciona la regla y marca dos puntos.';$('boardFilename').textContent=asset.name+(asset.kind==='pdf'?` · página ${asset.page}`:'');$('pdfPageRow').hidden=asset.kind!=='pdf';
     if(asset.pdf){$('pdfPage').replaceChildren(...Array.from({length:asset.pdf.numPages},(_,i)=>new Option(`${i+1} / ${asset.pdf.numPages}`,i+1)));$('pdfPage').value=asset.page;}
     discipline.reset();for(const id of ['metricLength','metricWidth','metricPerimeter','metricArea'])$(id).textContent='—';$('metricNote').textContent='Analizando la lámina actual…';$('extractionStatus').hidden=true;$('proceedStep2').hidden=true;prepareClean();
     const bytes=asset.kind==='image'?await asset.file.arrayBuffer():await (await blobFromCanvas(clean)).arrayBuffer();
     asset.identity=[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(b=>b.toString(16).padStart(2,'0')).join('');
-    try{model.calibration=restoreCalibration(localStorage.getItem(`prodalam.scale.${asset.identity}`),{imageSha256:asset.identity,width:clean.width,height:clean.height});}catch{}
+    if(!asset.restoredFromPackage)purgeAssetCache(asset.identity);
+    try{model.calibration=asset.restoredFromPackage?restoreCalibration(localStorage.getItem(`prodalam.scale.${asset.identity}`),{imageSha256:asset.identity,width:clean.width,height:clean.height}):null;}catch{}
+    message('Identificando el tipo de lámina con el reconocimiento local…');
+    asset.classification=await classifyDrawingAsset(asset,clean);if(token!==model.selection)return;
     discipline.load();configureDisciplineUI();if(discipline.active)$('measureUnit').value=discipline.calibrationUnit;
     setBusy(false);setStep(1);updateMetrics();
     const omitted=dxf?.unsupported.length?` Entidades omitidas: ${dxf.unsupported.join(', ')}.`:'';
@@ -196,7 +225,7 @@ function prepareClean(){
   for(const c of [original,render,overlay,preview]){c.width=clean.width;c.height=clean.height;}
   $('boardFrame').style.aspectRatio=`${clean.width}/${clean.height}`;drawBoard();requestAnimationFrame(fitBoard);
 }
-function invalidate(){resetPresentation();$('vectorOverlay').checked=false;$('vectorOverlay').disabled=true;$('proceedStep2').hidden=true;$('extractionStatus').hidden=true;model.processed=false;model.render=null;model.spatialRender=null;model.vectors=null;model.bounds=null;model.version++;$('downloadVectors').disabled=true;document.querySelector('[data-step="2"]').disabled=true;document.querySelector('[data-step="3"]').disabled=true;prepareClean();updateMetrics();message('Preparación actualizada. Procesa de nuevo para sincronizar los Pasos 2 y 3.');setBusy(false);}
+function invalidate(){resetPresentation();$('vectorOverlay').checked=false;$('vectorOverlay').disabled=true;$('proceedStep2').hidden=true;$('extractionStatus').hidden=true;model.processed=false;model.render=null;model.spatialRender=null;model.topRender=null;model.vectors=null;model.bounds=null;model.version++;$('downloadVectors').disabled=true;document.querySelector('[data-step="2"]').disabled=true;document.querySelector('[data-step="3"]').disabled=true;prepareClean();updateMetrics();message('Preparación actualizada. Procesa de nuevo para sincronizar los Pasos 2 y 3.');setBusy(false);}
 for(const id of ['grayscale','invertContrast','vectorWidth','paperCleanup'])$(id).oninput=()=>{$('vectorWidthValue').textContent=`${fmt(Number($('vectorWidth').value),1)} px`;invalidate();};
 $('sourcePreview').onchange=drawBoard;$('vectorOverlay').onchange=drawBoard;
 $('technicalGrid').onchange=drawBoard;$('dimensionToggle').onchange=()=>{drawOverlay();refreshThree();};$('measureUnit').onchange=()=>{drawOverlay();updateMetrics();refreshThree();};
@@ -221,6 +250,7 @@ function drawOverlay(){
   if(model.mode==='area'&&model.points.length>1)for(let i=1;i<model.points.length;i++)line2D(ctx,model.points[i-1],model.points[i],'');
   for(const p of model.points)line2D(ctx,p,p,'','#cb8730');
   if(model.step===1||discipline.pending||$('vectorOverlay').checked)discipline.draw(ctx);
+  if(model.mode==='edit-plan'&&!discipline.active){ctx.strokeStyle='#006ed6';ctx.fillStyle='#0054ad';ctx.lineWidth=1.5;ctx.font='10px sans-serif';for(const o of bridge.snapshot().result?.objects??[]){if(o.confidence<Number($('confidence').value))continue;const[x,y,x1,y1]=o.bbox;ctx.strokeRect(x,y,x1-x,y1-y);ctx.fillText(CATEGORY[o.category]?.label??o.category,x,Math.max(10,y-3));}}
   if($('dimensionToggle').checked&&model.bounds){const b=model.bounds,y=Math.max(18,b.y0-18),x=Math.min(clean.width-20,b.x1+18);line2D(ctx,[b.x0,y],[b.x1,y],`${model.calibration?'':'≈ '}${distanceLabel(b.width*scale())}`);line2D(ctx,[x,b.y0],[x,b.y1],`${model.calibration?'':'≈ '}${distanceLabel(b.height*scale())}`);}
 }
 function updateMetrics(){
@@ -239,7 +269,7 @@ $('areaToggle').onclick=()=>tool('area');$('closeArea').onclick=()=>{if(model.po
 $('flowCalibrate').onclick=()=>tool('calibrate');$('rulerToggle').onclick=()=>tool('ruler');
 $('clearMeasurements').onclick=()=>{model.measurements=[];model.boundary=[];model.points=[];updateMetrics();refreshThree();$('rulerResult').textContent='Selecciona la regla y marca dos puntos.';};
 overlay.onclick=e=>{
-  if(model.busy)return;if(discipline.handleClick(e))return;
+  if(model.busy)return;if(model.mode==='edit-plan'){editPlanClick(pointOnCanvas(e,overlay));return;}if(discipline.handleClick(e))return;
   if(!model.asset||!model.mode||model.busy||model.panEnabled)return;const p=pointOnCanvas(e,overlay);model.points.push(p);drawOverlay();if(model.mode==='area')return;
   if(model.points.length===2){if(distance(...model.points)<10){model.points=[];message('Separa los puntos al menos 10 píxeles.',true);return;}
     if(model.mode==='calibrate'){$('flowDistanceDialog').showModal();$('flowDistanceLabel').textContent=discipline.active&&discipline.calibrationUnit==='mm'?'Distancia en milímetros':'Distancia en metros';$('flowDistance').focus();}else{model.measurements.push(model.points.map(p=>[...p]));model.points=[];updateMetrics();refreshThree();}}
@@ -257,12 +287,17 @@ $('processVectors').onclick=async()=>{
     const blob=unchanged?model.asset.file:await blobFromCanvas(clean),url=URL.createObjectURL(blob),previousToken=bridge.snapshot().fileToken;
     try{await bridge.loadImage(url,model.asset.name,model.asset.sample&&unchanged);}finally{URL.revokeObjectURL(url);}
     if(model.asset.kind==='dxf')bridge.importVectorGeometry(cadWallGeometry(model.asset.mappedPaths,clean.width,clean.height,Math.max(2,Number($('vectorWidth').value))));
-    let snap=bridge.snapshot();if(snap.prediction&&snap.rawPrediction?.provenance?.execution==='live'){const refined=refineStructure(snap.prediction,snap.baseline);if(refined!==snap.prediction){bridge.importAnalysis(refined);snap=bridge.snapshot();}}if(snap.fileToken===previousToken||!snap.result)throw new Error('El motor no devolvió una geometría válida.');
+    let snap=bridge.snapshot();if(snap.localInferenceError&&!snap.rawPrediction)throw new Error('No se completó el reconocimiento local. Vuelve a pulsar Procesar para reintentar; el plano se conserva. '+snap.localInferenceError);if(snap.prediction&&snap.rawPrediction?.provenance?.execution==='live'){const refined=refineStructure(snap.prediction,snap.baseline);if(refined!==snap.prediction){bridge.importAnalysis(refined);snap=bridge.snapshot();}}if(snap.fileToken===previousToken||!snap.result)throw new Error('El motor no devolvió una geometría válida.');
+    model.editBase=structuredClone(snap.result);
+    const blank={sourceHash:snap.imageSha256,width:snap.result.width,height:snap.result.height,edits:[]};
+    model.editRecord=readStore('prodalam.edits.'+snap.imageSha256,blank);
+    try{const edited=applyPlanEdits(model.editBase,model.editRecord);if(model.editRecord.edits.length){bridge.importAnalysis(edited);snap=bridge.snapshot();}}catch{model.editRecord=blank;}
     discipline.assertInterior(snap);
     model.vectors=structuredClone(bridge.architecture());model.bounds=geometryBounds(model.vectors);
     if(!model.bounds)throw new Error('No se detectó estructura en esta lámina. Revisa contraste y orientación antes de continuar.');
     if(!model.calibration&&snap.calibration)model.calibration={...snap.calibration,imageSha256:model.asset.identity};
-    applySharedScale();generateRender();model.processed=true;model.processedHash=snap.imageSha256;
+    applySharedScale();generateRender();model.processed=true;model.reviewOnly=null;model.processedHash=snap.imageSha256;
+    $('renderSource').value='technical';$('renderSource').onchange();comparator.setMode('render');
     await restoreProjectPresentation();
     $('downloadVectors').disabled=false;setBusy(false);setStep(1);updateMetrics();
     updateAnalysisQuality(snap);
@@ -278,20 +313,63 @@ function updateDisciplineMetrics(){
   if(discipline.result?.group.userData.mechanicalAssembly)$('metricNote').textContent='Conjunto propuesto por componentes · eje opcional · detalles revisables. '+(provisional?'Medidas provisionales: calibra la lámina.':'XY según la calibración de la lámina.')+' Revisa cada pieza en el visor 3D.';
   if(model.measurements.length){const m=model.measurements.at(-1);$('rulerResult').textContent=`${provisional?'Provisional · ':''}${distanceLabel(distance(...m,scale()))} · ${model.measurements.length} medición(es)`;}
 }
-function installDisciplineResult(output){if(!output)return;if(output.project.sourceHash!==model.asset?.identity||output.project.drawing.width!==clean.width||output.project.drawing.height!==clean.height)throw new Error('El modelo pertenece a otro plano. Procesa la lámina actual.');const first=!model.processed;model.render=output.canvas;model.spatialRender=output.spatialCanvas;$('renderSource').querySelector('[value=spatial]').disabled=!output.spatialCanvas;if(first){$('renderSource').value='technical';comparator.setMode('compare');}model.vectors=output.vectors;model.bounds=output.bounds;model.processed=true;model.processedHash=model.asset.identity;model.renderRecord={...createRenderRecord({sourceHash:model.processedHash,width:clean.width,height:clean.height,kind:'technical',nativeWidth:output.canvas.width,nativeHeight:output.canvas.height}),domain:discipline.domain,geometryValidated:false,assumptions:output.result.assumptions};$('analysisQuality').hidden=false;$('analysisQuality').textContent=output.result.assumptions.join(' ');$('extractionStatus').textContent='Modelo especializado preparado · revisa su geometría y sus parámetros.';$('proceedStep2').innerHTML='Continuar al Paso 2 <span>→</span>';drawBoard();updateMetrics();updatePresentationLabel();}
-async function processDiscipline(){const returnStep=model.step;if(model.busy||!model.asset)return;if(discipline.pending){message('Cierra o cancela el trazo pendiente antes de procesar.',true);return;}setBusy(true);message('Extrayendo geometría para la disciplina seleccionada…');await nextPaint();try{await discipline.prepareMaterials();installDisciplineResult(discipline.process(true));await restoreProjectPresentation();setBusy(false);setStep(returnStep===3?3:1);message('Modelo especializado listo. Revisa los perfiles y continúa al Paso 2.');}catch(error){message(error.message,true);}finally{setBusy(false);}}
+function installDisciplineResult(output){if(!output)return;if(output.project.sourceHash!==model.asset?.identity||output.project.drawing.width!==clean.width||output.project.drawing.height!==clean.height)throw new Error('El modelo pertenece a otro plano. Procesa la lámina actual.');const first=!model.processed||!!model.reviewOnly;model.reviewOnly=null;model.render=output.canvas;model.spatialRender=output.spatialCanvas;model.topRender=output.topCanvas;$('renderSource').querySelector('[value=top]').disabled=!output.topCanvas;$('renderSource').querySelector('[value=top]').hidden=!output.topCanvas;$('renderSource').querySelector('[value=spatial]').disabled=!output.spatialCanvas;if(first){$('renderSource').value='technical';comparator.setMode('compare');}model.vectors=output.vectors;model.bounds=output.bounds;model.processed=true;model.processedHash=model.asset.identity;model.renderRecord={...createRenderRecord({sourceHash:model.processedHash,width:clean.width,height:clean.height,kind:'technical',nativeWidth:output.canvas.width,nativeHeight:output.canvas.height}),domain:discipline.domain,geometryValidated:false,assumptions:output.result.assumptions};$('analysisQuality').hidden=false;$('analysisQuality').textContent=output.result.assumptions.join(' ');$('extractionStatus').textContent='Modelo especializado preparado · revisa su geometría y sus parámetros.';$('proceedStep2').innerHTML='Continuar al Paso 2 <span>→</span>';drawBoard();updateMetrics();updatePresentationLabel();}
+async function processDiscipline(){const returnStep=model.step;if(model.busy||!model.asset)return;if(discipline.pending){message('Cierra o cancela el trazo pendiente antes de procesar.',true);return;}setBusy(true);message('Extrayendo geometría para la disciplina seleccionada…');await nextPaint();try{await discipline.prepareMaterials();installDisciplineResult(discipline.process(true));await restoreProjectPresentation();setBusy(false);setStep(returnStep===3?3:1);message('Modelo especializado listo. Revisa los perfiles y continúa al Paso 2.');}catch(error){if(error.code==='EXTERIOR_DEPTH_UNRESOLVED'){installGeometryReview(error);setBusy(false);setStep(2);}message(error.message,true);}finally{setBusy(false);}}
 function focusEngineeringView(){
   const b=discipline.focusBounds;if(!b||!model.asset)return;if(model.step===3)setStep(2);
   requestAnimationFrame(()=>{fitBoard();const stage=$('boardStage').getBoundingClientRect(),frame=$('boardFrame'),sx=frame.offsetWidth/clean.width,sy=frame.offsetHeight/clean.height,zoom=Math.max(1,Math.min(5,stage.width*.78/(b.width*sx),stage.height*.78/(b.height*sy)));
     model.view={zoom,panX:-(.5*(b.x0+b.x1)-clean.width/2)*sx*zoom,panY:-(.5*(b.y0+b.y1)-clean.height/2)*sy*zoom};$('curtainRange').value=(b.x0+b.x1)/2/clean.width*100;applyBoardTransform();applyCurtain();});
 }
-function handleDisciplineChange(reason){
-  document.body.dataset.drawingDomain=discipline.domain;if(reason==='focus-view'){focusEngineeringView();return;}if(reason==='overlay'){drawOverlay();return;}if(reason==='routing'){if(discipline.routingBlocked){model.processed=false;model.render=null;model.spatialRender=null;model.vectors=null;setStep(1);}setBusy(model.busy);return;}
-  if(reason==='domain'){configureDisciplineUI();appearance.restore();appearanceApplied=false;model.mode=null;model.points=[];resetPresentation();model.processed=false;model.render=null;model.spatialRender=null;model.bounds=null;model.vectors=null;model.version++;$('measureUnit').value=discipline.active?discipline.calibrationUnit:'m';setStep(1);updateMetrics();setBusy(false);message('Disciplina seleccionada. Procesa la lámina con su herramienta específica.');return;}
-  if(reason==='process'){processDiscipline();return;}model.version++;if(model.processed&&discipline.active){try{installDisciplineResult(discipline.process(reason==='extract'));setBusy(false);}catch(error){message(error.message,true);}}else{drawOverlay();updateMetrics();}
+async function handleDisciplineChange(reason){
+  if(reason==='recognition'){if(model.busy||!model.asset)return;setBusy(true);message('Revisando hoja completa, contenido y orientación…');try{const asset=model.asset;asset.classification=await classifyDrawingAsset(asset,clean);if(asset!==model.asset)return;model.reviewOnly=null;model.processed=false;model.render=null;model.spatialRender=null;model.topRender=null;discipline.load();configureDisciplineUI();setBusy(false);setStep(1);message(asset.classification?'Clasificación actualizada. Revisa el tipo y procesa la lámina.':'El clasificador no respondió. Selecciona el tipo manualmente o vuelve a intentarlo.',!asset.classification);}finally{setBusy(false);}return;}
+
+  document.body.dataset.drawingDomain=discipline.domain;if(reason==='focus-view'){focusEngineeringView();return;}if(reason==='overlay'){drawOverlay();return;}if(reason==='routing'){if(discipline.routingBlocked){model.processed=false;model.render=null;model.spatialRender=null;model.topRender=null;model.vectors=null;setStep(1);}setBusy(model.busy);return;}
+  if(reason==='domain'){model.reviewOnly=null;configureDisciplineUI();appearance.restore();appearanceApplied=false;model.mode=null;model.points=[];resetPresentation();model.processed=false;model.render=null;model.spatialRender=null;model.topRender=null;model.bounds=null;model.vectors=null;model.version++;$('measureUnit').value=discipline.active?discipline.calibrationUnit:'m';setStep(1);updateMetrics();setBusy(false);message('Disciplina seleccionada. Procesa la lámina con su herramienta específica.');return;}
+  if(reason==='process'){processDiscipline();return;}model.version++;if(model.processed&&discipline.active){try{installDisciplineResult(discipline.process(reason==='extract'));setBusy(false);}catch(error){if(error.code==='EXTERIOR_DEPTH_UNRESOLVED'){installGeometryReview(error);setBusy(false);setStep(2);}message(error.message,true);}}else{drawOverlay();updateMetrics();}
+}
+function installGeometryReview(error){
+  const review=geometryReview(error.review,model.asset.identity,clean.width,clean.height);
+  model.reviewOnly=review;model.render=renderGeometryReview(clean,review);model.processed=true;model.processedHash=model.asset.identity;
+  model.spatialRender=null;model.topRender=null;model.vectors=null;model.bounds=null;model.renderRecord=null;
+  for(const value of ['spatial','top','presentation'])$('renderSource').querySelector('[value="'+value+'"]').disabled=true;
+  $('renderSource').value='technical';comparator.setMode('compare');
+  $('analysisQuality').hidden=false;$('analysisQuality').classList.add('is-limited');$('analysisQuality').textContent='Análisis 2D disponible: '+review.faces.length+' contornos y '+review.openings.length+' aberturas candidatas. La geometría 3D aún no está validada. Azul: contornos; ámbar: aberturas por revisar.';
+  $('extractionStatus').textContent='Reconocimiento preparado para revisión; modelo 3D pendiente.';
+  $('proceedStep2').innerHTML='Revisar contornos en el Paso 2 <span>→</span>';updateMetrics();
+}
+const corrections=document.createElement('details');corrections.id='planCorrections';corrections.className='render-tools';corrections.hidden=true;
+corrections.innerHTML=`<summary>Corregir elementos del plano</summary><p class="flow-hint">Corrige sobre el original. Los cambios actualizan el cenital y el mismo modelo del Paso 3; puedes deshacerlos.</p><label class="source-label" for="planEditAction">Acción</label><select id="planEditAction"><option value="add-object">Añadir elemento omitido</option><option value="replace-object">Cambiar tipo de elemento</option><option value="remove-object">Eliminar detección incorrecta</option><option value="add-wall">Añadir tramo de muro</option><option value="remove-wall">Borrar tramo de muro</option></select><label class="source-label" for="planEditCategory">Elemento</label><select id="planEditCategory">${Object.entries(CATEGORY).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('')}</select><button id="planEditStart" class="flow-secondary">Corregir sobre el original</button><button id="planEditDone" class="flow-secondary">Ver render actualizado</button><button id="planEditUndo" class="flow-text">Deshacer última corrección</button><p id="planEditStatus" class="flow-hint" role="status"></p>`;
+$('step2Controls').append(corrections);
+const recognitionReport=document.createElement('button');recognitionReport.className='flow-secondary';recognitionReport.textContent='↓ Informe del reconocimiento';$('step2Controls').append(recognitionReport);
+recognitionReport.onclick=()=>{if(!model.processed)return;const snap=bridge.snapshot(),report={schema:'prodalam.recognition-report.v1',version:'3.3.8',sourceHash:model.asset.identity,classification:model.asset.classification,domain:discipline.domain,geometryValidated:false,...(model.reviewOnly?{review:model.reviewOnly}:discipline.active?{geometry:discipline.result?.sourceVolume,assumptions:discipline.result?.assumptions}:{analysis:summarizeAnalysis(snap,Number($('confidence').value)),objects:snap.result.objects,reviewOnlyObjects:snap.result.reviewOnlyObjects,omittedFrom3D:snap.furnitureReport?.rejected,placementWarnings:snap.furnitureReport?.warnings,userCorrections:model.editRecord})};save(new Blob([JSON.stringify(report,null,2)],{type:'application/json'}),'prodalam-reconocimiento.json');};
+
+function refreshEditedPlan(){
+  const edited=applyPlanEdits(model.editBase,model.editRecord);bridge.importAnalysis(edited);model.version++;
+  model.vectors=structuredClone(bridge.architecture());model.bounds=geometryBounds(model.vectors);generateRender();
+  saveStore('prodalam.edits.'+model.editRecord.sourceHash,model.editRecord);
+  updateMetrics();updateAnalysisQuality(bridge.snapshot());drawBoard();
+  $('planEditStatus').textContent=model.editRecord.edits.length+' correcciones guardadas para este plano.';
+}
+$('planEditStart').onclick=()=>{if(model.busy||discipline.active||!model.editBase)return;model.mode='edit-plan';model.points=[];model.panEnabled=false;$('renderSource').value='technical';comparator.setMode('source');drawBoard();message(['remove-object','replace-object'].includes($('planEditAction').value)?'Haz clic en el elemento que deseas corregir.':'Marca dos esquinas opuestas del elemento o tramo de muro.');};
+$('planEditAction').onchange=()=>{model.points=[];$('planEditStart').click();};
+$('planEditDone').onclick=()=>{model.mode=null;model.points=[];$('renderSource').value='technical';comparator.setMode('render');drawBoard();};
+$('planEditUndo').onclick=()=>{if(model.busy||!model.editRecord?.edits.length)return;const previous=model.editRecord.edits.pop();try{refreshEditedPlan();}catch(e){model.editRecord.edits.push(previous);message(e.message,true);}};
+function editPlanClick(point){
+  if(discipline.active||model.step!==2||!model.editBase)return;
+  const kind=$('planEditAction').value;let edit;
+  if(['remove-object','replace-object'].includes(kind)){
+    const object=objectAt(bridge.snapshot().result,point,Number($('confidence').value));
+    if(!object){message('No hay una detección en ese punto. Para agregarla, selecciona Añadir elemento omitido.');return;}
+    edit={kind,bbox:[...object.bbox],category:kind==='remove-object'?object.category:$('planEditCategory').value};
+  }else{
+    model.points.push(point);drawOverlay();if(model.points.length<2)return;
+    const[a,b]=model.points;model.points=[];edit={kind,bbox:[Math.min(a[0],b[0]),Math.min(a[1],b[1]),Math.max(a[0],b[0]),Math.max(a[1],b[1])],category:$('planEditCategory').value};
+  }
+  model.editRecord.edits.push(edit);try{refreshEditedPlan();message('Corrección aplicada al plano y al modelo 3D. Puedes continuar corrigiendo o ver el render actualizado.');}catch(error){model.editRecord.edits.pop();message(error.message,true);}
 }
 function updateAnalysisQuality(snapshot){
   const quality=summarizeAnalysis(snapshot,Number($('confidence').value));
+  $('interiorQuality3d').hidden=!quality.limited;$('interiorQuality3d').textContent=quality.message;
   $('analysisQuality').hidden=false;$('analysisQuality').classList.toggle('is-limited',quality.limited);$('analysisQuality').textContent=quality.message;
   $('proceedStep2').innerHTML=quality.limited?'Continuar solo con estructura <span>→</span>':'Continuar al Paso 2 <span>→</span>';
 }
@@ -310,16 +388,19 @@ function generateRender(){
     const w=s.result.width*s.metersPerPixel,h=s.result.height*s.metersPerPixel,camera=new THREE.OrthographicCamera(-w/2,w/2,h/2,-h/2,.1,1000);camera.position.set(0,100,0);camera.up.set(0,0,-1);camera.lookAt(0,0,0);camera.updateMatrixWorld();
     const renderScale=Math.min(2,2048/Math.max(clean.width,clean.height));topRenderer.toneMappingExposure=.92;topRenderer.setSize(Math.round(clean.width*renderScale),Math.round(clean.height*renderScale),false);topRenderer.render(topScene,camera);
     model.render=document.createElement('canvas');model.render.width=topRenderer.domElement.width;model.render.height=topRenderer.domElement.height;model.render.getContext('2d').drawImage(topRenderer.domElement,0,0);
+    const bounds=new THREE.Box3().setFromObject(sourceModel),spatialCamera=spatialPreviewCamera(bounds,clean.width/clean.height);
+    topRenderer.render(topScene,spatialCamera);model.spatialRender=document.createElement('canvas');model.spatialRender.width=topRenderer.domElement.width;model.spatialRender.height=topRenderer.domElement.height;model.spatialRender.getContext('2d').drawImage(topRenderer.domElement,0,0);
+    $('renderSource').querySelector('[value=spatial]').disabled=false;
     model.renderRecord=createRenderRecord({sourceHash:s.imageSha256,width:clean.width,height:clean.height,kind:'technical',nativeWidth:model.render.width,nativeHeight:model.render.height});
   }finally{topAppearance.restore();}
   drawBoard();if(model.step===3){textureModel=null;attachTexture();syncAppearance(true);}
 }
 
 const comparator=bindPlanComparator({state:model,frame:$('boardFrame'),render,line:$('curtainLine'),range:$('curtainRange'),value:$('curtainValue'),originalBadge:$('originalBadge'),buttons:{compare:$('compareMode'),render:$('renderMode'),source:$('sourceMode')},onCompare(){
-  if($('renderSource').value==='spatial'){$('renderSource').value='technical';drawPresentation();updatePresentationLabel();}
+  if(['spatial','top'].includes($('renderSource').value)){$('renderSource').value='technical';drawPresentation();updatePresentationLabel();}
 }});
 function applyCurtain(){comparator.apply();}
-$('downloadVectors').onclick=()=>{const vectors=model.asset.kind==='dxf'?{paths:model.asset.mappedPaths}:model.vectors;save(new Blob([vectorSVG(vectors,clean.width,clean.height,Number($('vectorWidth').value))],{type:'image/svg+xml'}),'prodalam-vectores.svg');};$('downloadRender').onclick=async()=>{try{save(await blobFromCanvas($('renderSource').value==='presentation'&&model.presentation?model.presentation.canvas:$('renderSource').value==='spatial'?model.spatialRender:model.render),'prodalam-render-cenital.png');}catch(e){message(e.message,true);}};
+$('downloadVectors').onclick=()=>{const vectors=model.asset.kind==='dxf'?{paths:model.asset.mappedPaths}:model.vectors;save(new Blob([vectorSVG(vectors,clean.width,clean.height,Number($('vectorWidth').value))],{type:'image/svg+xml'}),'prodalam-vectores.svg');};$('downloadRender').onclick=async()=>{try{save(await blobFromCanvas($('renderSource').value==='presentation'&&model.presentation?model.presentation.canvas:$('renderSource').value==='spatial'?model.spatialRender:$('renderSource').value==='top'?model.topRender:model.render),'prodalam-render-cenital.png');}catch(e){message(e.message,true);}};
 function attachTexture(){
   const {planMesh,model:current}=bridge.context();if(!model.render||!planMesh||textureModel===current||bridge.snapshot().imageSha256!==model.processedHash)return;
   const texture=new THREE.CanvasTexture(model.render);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=4;
@@ -371,25 +452,32 @@ $('boardStage').addEventListener('pointermove',event=>{if(!panGesture||panGestur
 for(const type of ['pointerup','pointercancel'])$('boardStage').addEventListener(type,event=>{if(panGesture?.id!==event.pointerId)return;if($('boardStage').hasPointerCapture(event.pointerId))$('boardStage').releasePointerCapture(event.pointerId);panGesture=null;});
 $('boardStage').addEventListener('wheel',event=>{if(!model.asset||model.busy)return;event.preventDefault();const rect=$('boardStage').getBoundingClientRect();changeZoom(model.view.zoom*Math.exp(-Math.max(-100,Math.min(100,event.deltaY))*.003),[event.clientX-(rect.left+rect.width/2),event.clientY-(rect.top+rect.height/2)]);},{passive:false});
 
-function resetPresentation(){cgiAbort?.abort();model.spatialRender=null;render.getContext('2d').clearRect(0,0,render.width,render.height);$('renderSource').querySelector('[value=spatial]').disabled=true;
-  model.presentation=null;model.renderRecord=null;model.sourceOnly=false;$('analysisQuality').hidden=true;
+function resetPresentation(){cgiAbort?.abort();model.spatialRender=null;model.topRender=null;render.getContext('2d').clearRect(0,0,render.width,render.height);$('renderSource').querySelector('[value=spatial]').disabled=true;$('renderSource').querySelector('[value=top]').disabled=true;$('renderSource').querySelector('[value=top]').hidden=true;
+  model.presentation=null;model.renderRecord=null;model.sourceOnly=false;$('analysisQuality').hidden=true;$('interiorQuality3d').hidden=true;
   $('renderSource').value='technical';$('renderSource').querySelector('[value="presentation"]').disabled=true;
   updatePresentationLabel();
 }
 function drawPresentation(){
-  const selected=$('renderSource').value==='presentation'?model.presentation?.canvas:$('renderSource').value==='spatial'?model.spatialRender:null;
-  const source=selected??model.render;if(!source)return;const density=Math.min(3,3072/Math.max(clean.width,clean.height)),width=Math.round(clean.width*density),height=Math.round(clean.height*density);if(render.width!==width||render.height!==height){render.width=width;render.height=height;}const target=render.getContext('2d');render.setAttribute('aria-label',selected?($('renderSource').value==='spatial'?'Render 3D de la geometría especializada':'Diseño fotorrealista vinculado al plano'):discipline.active?'Vista técnica procesada':'Render cenital local');
+  const selected=$('renderSource').value==='presentation'?model.presentation?.canvas:$('renderSource').value==='spatial'?model.spatialRender:$('renderSource').value==='top'?model.topRender:null;
+  const source=selected??model.render;if(!source)return;const density=Math.min(3,3072/Math.max(clean.width,clean.height)),width=Math.round(clean.width*density),height=Math.round(clean.height*density);if(render.width!==width||render.height!==height){render.width=width;render.height=height;}const target=render.getContext('2d');render.setAttribute('aria-label',selected?($('renderSource').value==='spatial'?'Perspectiva 3D de la geometría especializada':$('renderSource').value==='top'?'Render cenital 3D ortográfico':'Diseño fotorrealista vinculado al plano'):discipline.active?'Vista técnica procesada':'Render cenital local');
   target.clearRect(0,0,render.width,render.height);target.fillStyle='#f5f4ef';target.fillRect(0,0,render.width,render.height);
   const size=fitImageSize(source.width,source.height,render.width,render.height);
   target.drawImage(source,(render.width-size.width)/2,(render.height-size.height)/2,size.width,size.height);
 }
 function updatePresentationLabel(){
-  if(discipline.active&&$('renderSource').value==='spatial'){$('renderBadge').textContent='PERSPECTIVA 3D · VISTA LIBRE';$('renderProvenance').textContent='Perspectiva del mismo modelo del Paso 3. Mueve la cortina o pulsa Comparar para volver al render frontal alineado.';return;}
+  document.querySelector('#step2Controls h2').textContent=model.reviewOnly?'02 Revisión del dibujo':'02 Diseño del proyecto';
+  document.querySelector('#step2Controls > .flow-hint').textContent=model.reviewOnly?'Compara los contornos detectados con la lámina. Para continuar al 3D se necesita un perfil de alzado o una vista adicional.':'Revisa el render y compara con la lámina preparada. Comprueba dimensiones, aberturas y elementos antes de usar el modelo.';
+  const top=$('renderSource').value==='top',spatial=$('renderSource').value==='spatial';document.querySelector('[data-step="2"] span').firstChild.textContent=top?'Render cenital':spatial?'Render 3D':discipline.active?'Vista procesada':'Render cenital';if(model.step===2&&!discipline.active&&$('renderSource').value==='technical')$('flowDescription').textContent='Vista cenital del mismo interior del Paso 3. Pulsa Comparar para revisar su alineación con el plano original.';if(model.step===2&&spatial)$('flowDescription').textContent='Perspectiva del mismo modelo del Paso 3. Usa Comparar para revisar la geometría sobre el plano original.';document.body.dataset.previewKind=top||!discipline.active&&$('renderSource').value==='technical'?'top':spatial?'spatial':'aligned';$('renderMode').textContent=top?'Render cenital':spatial?'Perspectiva 3D':discipline.active?'Vista procesada':'Render cenital';if(model.step===2)$('boardEyebrow').textContent=top?'PASO 2 / RENDER CENITAL':spatial?'PASO 2 / RENDER 3D':discipline.active?'PASO 2 / VISTA TÉCNICA':'PASO 2 / RENDER CENITAL';
+  if(model.reviewOnly){$('renderMode').textContent='Revisión 2D · 3D pendiente';document.querySelector('[data-step="2"] span').firstChild.textContent='Revisión de geometría';$('renderSource').querySelector('[value="technical"]').textContent='Contornos detectados · revisión 2D';if(model.step===2){$('flowDescription').textContent='Compara las detecciones con el dibujo. Traza un perfil de alzado o aporta una vista frontal para completar la geometría.';$('boardEyebrow').textContent='PASO 2 / REVISIÓN DE GEOMETRÍA';}$('renderBadge').textContent='REVISIÓN 2D · SIN MODELO 3D';$('renderProvenance').textContent='Contornos del mismo archivo. La reconstrucción 3D está pendiente.';return;}
+  if(top){if(model.step===2)$('flowDescription').textContent='Vista superior ortográfica del volumen propuesto. Comparar permite revisar la lámina preparada en su proyección original.';$('renderBadge').textContent='RENDER CENITAL 3D · VISTA SUPERIOR';$('renderProvenance').textContent='Vista superior ortográfica del mismo volumen del Paso 3. Comparar vuelve a la lámina original preparada.';return;}
+  if($('renderSource').value==='spatial'){$('renderBadge').textContent='PERSPECTIVA 3D · VISTA LIBRE';$('renderProvenance').textContent='Perspectiva del mismo modelo del Paso 3. Mueve la cortina o pulsa Comparar para volver al render frontal alineado.';return;}
   if(discipline.active&&$('renderSource').value!=='presentation'){$('renderBadge').textContent=discipline.domain==='exterior'?'PROYECCIÓN ORIGINAL · MATERIALES':discipline.domain==='mechanical'?'LÁMINA COMPLETA · ACABADO TÉCNICO':'LÁMINA ESTRUCTURAL · PROYECCIÓN ORIGINAL';$('renderProvenance').textContent='Se conservan las vistas, cotas y llamadas de la lámina. Las superficies reciben materiales; las vistas 3D compatibles se proyectan en su posición original. Confirma el material y la escala.';return;}
   const p=$('renderSource').value==='presentation'?model.presentation:null;
   $('renderBadge').textContent=p?(p.record.kind==='linked'?'DISEÑO VINCULADO · v2.3':p.record.kind==='generated'?'OPENAI · POR REVISAR':'RENDER IMPORTADO · POR REVISAR'):'RENDER LOCAL · PASO 2';
   if(p?.record.kind==='generated'&&!cgiConfigured)$('cgiStatus').textContent='Este proyecto tiene una propuesta IA guardada. Para generar otra, conecta tu proveedor de IA o importa un nuevo diseño.';
   $('renderProvenance').textContent=p?`${p.record.kind==='linked'?'Referencia aprobada de v2.3':p.record.kind==='generated'?'Generado con OpenAI':'Imagen importada'} · ${p.record.nativeWidth} × ${p.record.nativeHeight} px. Diseño vinculado al plano; revisa su correspondencia con la cortina.`:'Render local de los elementos reconocidos, con acabados de catálogo. La generación fotorrealista es una función distinta.';
+
+
 }
 async function installPresentation(image,kind,details={},persist=true,scope=captureRenderContext(),activate=true){
   if(!contextIsCurrent(scope))throw new Error('La imagen corresponde a otro plano o revisión. No se ha aplicado.');
@@ -405,7 +493,7 @@ async function restoreProjectPresentation(){
   if(!contextIsCurrent(scope)||!canRestorePresentation(saved,scope.identity,scope.width,scope.height,{domain:scope.domain,revision:PRESENTATION_REVISION}))return false;
   try{const image=await decodeImage(saved.blob);if(!contextIsCurrent(scope))return false;await installPresentation(image,saved.kind,{designName:saved.designName,provider:saved.provider,model:saved.model,imageBounds:saved.imageBounds,registration:saved.registration},false,scope,false);return true;}catch{return false;}
 }
-$('renderSource').onchange=()=>{if($('renderSource').value==='spatial'){model.view={zoom:1,panX:0,panY:0};applyBoardTransform();comparator.setMode('render');}else if($('renderSource').value==='technical'){model.view={zoom:1,panX:0,panY:0};applyBoardTransform();}drawPresentation();updatePresentationLabel();applyCurtain();};
+$('renderSource').onchange=()=>{if(['spatial','top'].includes($('renderSource').value)){model.view={zoom:1,panX:0,panY:0};applyBoardTransform();comparator.setMode('render');}else if($('renderSource').value==='technical'){model.view={zoom:1,panX:0,panY:0};applyBoardTransform();}drawPresentation();updatePresentationLabel();applyCurtain();};
 $('finishPrompt').value=FINISH_PRESETS.oak.prompt;
 $('finishPreset').onchange=()=>{$('finishPrompt').value=FINISH_PRESETS[$('finishPreset').value].prompt;if(model.processed){generateRender();drawPresentation();}};
 async function checkCGIStatus(){
@@ -495,5 +583,89 @@ $('loadExteriorExample').onclick=()=>loadDisciplineExample('fachada.jpeg','exter
 $('loadExample').onclick=loadSample;
 $('proceedStep2').onclick=()=>{setStep(2);updatePresentationLabel();};
 $('downloadClean').onclick=async()=>{if(model.asset)save(await blobFromCanvas(clean),'prodalam-plano-limpio.png');};
+if($('saveProjectButton'))$('saveProjectButton').onclick=()=>{
+  if(!model.asset||model.busy)return;
+  try{
+    const srcCanvas=document.createElement('canvas');
+    const sw=model.source.naturalWidth??model.source.width,sh=model.source.naturalHeight??model.source.height;
+    srcCanvas.width=sw;srcCanvas.height=sh;srcCanvas.getContext('2d').drawImage(model.source,0,0,sw,sh);
+    const records={};
+    for(const d of ['interior','exterior','mechanical','structure']){
+      try{const raw=localStorage.getItem(`prodalam.discipline.v1.${model.asset.identity}.${d}`);if(raw)records[d]=JSON.parse(raw);}catch{}
+    }
+    const pkg=createProjectPackage({
+      asset:model.asset,
+      sourceDataUrl:srcCanvas.toDataURL('image/png'),
+      dxfText:model.asset.dxfText??null,
+      width:clean.width,
+      height:clean.height,
+      step:model.step,
+      preparation:{
+        grayscale:$('grayscale').checked,
+        invertContrast:$('invertContrast').checked,
+        paperCleanup:$('paperCleanup').checked,
+        vectorWidth:Number($('vectorWidth').value),
+        measureUnit:$('measureUnit').value,
+        technicalGrid:$('technicalGrid').checked,
+        dimensionToggle:$('dimensionToggle').checked
+      },
+      calibration:model.calibration,
+      measurements:model.measurements,
+      boundary:model.boundary,
+      discipline:{
+        routingMode:$('drawingDiscipline').value,
+        domain:discipline.domain,
+        records
+      },
+      vectors:model.vectors,
+      bounds:model.bounds,
+      presentation:model.presentation?{dataUrl:model.presentation.canvas.toDataURL('image/png'),record:model.presentation.record}:null
+    });
+    const base=(model.asset.name??'proyecto').replace(/\.[^.]+$/,'')||'proyecto';
+    save(new Blob([JSON.stringify(pkg,null,2)],{type:'application/json'}),`${base}.renderpro.json`);
+    message('Proyecto guardado en un paquete completo (.renderpro.json).');
+  }catch(error){message(error.message,true);}
+};
+if($('openProjectButton'))$('openProjectButton').onclick=()=>{if(!model.busy)$('projectPackageFile')?.click();};
+if($('projectPackageFile'))$('projectPackageFile').onchange=async e=>{
+  const file=e.target.files[0];e.target.value='';if(!file||model.busy)return;
+  setBusy(true);
+  try{
+    const pkg=restoreProjectPackage(await file.text());
+    const id=pkg.asset.identity;
+    try{
+      if(pkg.calibration)localStorage.setItem(`prodalam.scale.${id}`,JSON.stringify(pkg.calibration));
+      localStorage.setItem(`prodalam.discipline.v1.${id}`,JSON.stringify({schema:3,domain:pkg.discipline.domain,mode:pkg.discipline.routingMode}));
+      for(const [d,rec] of Object.entries(pkg.discipline.records??{})){
+        localStorage.setItem(`prodalam.discipline.v1.${id}.${d}`,JSON.stringify(rec));
+      }
+    }catch{}
+    let asset;
+    if(pkg.asset.kind==='dxf'&&pkg.asset.dxfText){
+      const dxfBlob=new Blob([pkg.asset.dxfText],{type:'text/plain'});
+      asset={name:pkg.asset.name,kind:'dxf',file:new File([dxfBlob],pkg.asset.name,{type:'text/plain'}),dxfText:pkg.asset.dxfText,page:1,restoredFromPackage:true};
+    }else{
+      const res=await fetch(pkg.asset.sourceDataUrl),blob=await res.blob();
+      asset={name:pkg.asset.name,kind:'image',file:new File([blob],pkg.asset.name,{type:'image/png'}),page:pkg.asset.page,restoredFromPackage:true};
+    }
+    model.queue=[asset];setBusy(false);await selectAsset(asset);
+    $('grayscale').checked=pkg.preparation.grayscale;
+    $('invertContrast').checked=pkg.preparation.invertContrast;
+    $('paperCleanup').checked=pkg.preparation.paperCleanup;
+    $('vectorWidth').value=String(pkg.preparation.vectorWidth);
+    $('vectorWidthValue').textContent=`${fmt(pkg.preparation.vectorWidth,1)} px`;
+    $('measureUnit').value=pkg.preparation.measureUnit;
+    $('technicalGrid').checked=pkg.preparation.technicalGrid;
+    $('dimensionToggle').checked=pkg.preparation.dimensionToggle;
+    model.calibration=pkg.calibration;
+    model.measurements=pkg.measurements;
+    model.boundary=pkg.boundary;
+    prepareClean();updateMetrics();
+    if(pkg.presentation?.dataUrl){
+      try{const img=new Image();img.src=pkg.presentation.dataUrl;await img.decode();await installPresentation(img,pkg.presentation.record.kind,pkg.presentation.record,true,captureRenderContext(),false);}catch{}
+    }
+    message(`Proyecto ${pkg.asset.name} restaurado con su calibración, mediciones y ajustes.`);
+  }catch(error){setBusy(false);message(`No se pudo abrir el proyecto: ${error.message}`,true);}
+};
 checkCGIStatus();
 resetProject();

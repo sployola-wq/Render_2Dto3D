@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {inflateSync} from 'node:zlib';
 import {extractDrawing} from '../dist/discipline-analysis.js';
-import {drawingEvidence,restoreRoutingMode,resolveDrawingRoute,assertInteriorRoute,hasInteriorEvidence} from '../dist/drawing-routing.js';
+import {drawingEvidence,restoreRoutingMode,resolveDrawingRoute,assertInteriorRoute,hasInteriorEvidence,hasInteriorStructure} from '../dist/drawing-routing.js';
+import {detectPlan} from '../dist/detector.js';
+import {analyzeEngineeringDrawing} from '../dist/engineering-drawing.js';
 import {alignedProjection} from '../dist/discipline-render.js';
 import {buildDisciplineModel} from '../dist/discipline-models.js';
 import * as THREE from '../dist/vendor/three.module.js';
@@ -30,3 +32,35 @@ test('offset sections preserve source landmarks in the frontal camera in both sh
     assert.ok(vertices.count>0);result.dispose();
   }
 });
+
+test('the reported interior plan works with its connected walls when semantic equipment recognition is unavailable',()=>{
+  const im=raster('interior-reported'),data=detectPlan(im),snapshot={result:data},e=drawingEvidence(extractDrawing(im),{image:im,engineering:analyzeEngineeringDrawing(im)});
+  assert.equal(e.domain,'interior');assert.ok(data.walls.length>=30);assert.equal(hasInteriorEvidence(snapshot),false);assert.equal(hasInteriorStructure(snapshot,e),true);
+  assert.throws(()=>assertInteriorRoute({mode:'auto',evidence:e,snapshot}),/Confirma/);
+  assert.equal(assertInteriorRoute({mode:'interior',evidence:e,snapshot}),true);
+  assert.equal(hasInteriorStructure(snapshot,{domain:'exterior'}),false);assert.equal(hasInteriorStructure(snapshot,{domain:'interior',signals:{perspective:true}}),false);
+  assert.throws(()=>assertInteriorRoute({mode:'interior',evidence:{domain:'exterior'},snapshot}),/fachada exterior/);
+});
+test('scattered or degenerate orthogonal strokes cannot authorize structure-only interior inference',()=>{
+  for(const walls of [[],Array.from({length:10},(_,i)=>({axis:i%2?'h':'v',c:10,from:0,to:100,thickness:3})),[{axis:'h',c:20,from:0,to:100,thickness:3}]]){
+    const snapshot={result:{width:200,height:200,walls,objects:[]}};assert.equal(hasInteriorStructure(snapshot,{domain:'interior'}),false);
+    assert.throws(()=>assertInteriorRoute({mode:'interior',evidence:{domain:'interior'},snapshot}),/muros conectados/);
+  }
+});
+
+ test('unfurnished neural floorplans use their wall polygons only with visual interior evidence',()=>{
+  const rectangle=(x,y,w,h)=>({outer:[[x,y],[x+w,y],[x+w,y+h],[x,y+h]],holes:[]});
+  const snapshot={result:{width:200,height:200,objects:[],wallPolygons:[rectangle(20,20,160,4),rectangle(20,20,4,160),rectangle(20,176,160,4)]}};
+  assert.equal(hasInteriorStructure(snapshot,{domain:'interior',confidence:'visual'}),true);
+  assert.equal(hasInteriorStructure(snapshot,{domain:'interior',confidence:'uncertain'}),false);
+  assert.equal(hasInteriorStructure(snapshot,{domain:'exterior',confidence:'visual'}),false);
+ });
+
+ test('an architectural cross-section or elevation with a pitched roof routes to exterior instead of interior',()=>{
+  const im=raster('es-coupe'),d=extractDrawing(im),e=drawingEvidence(d,{image:im});
+  assert.equal(e.domain,'exterior');
+  assert.equal(e.signals?.elevationOrSection,true);
+  assert.equal(hasInteriorStructure({result:{width:im.width,height:im.height,wallPolygons:[{outer:[[10,10],[100,10],[100,100],[10,100]]}]}},e),false);
+  assert.throws(()=>assertInteriorRoute({mode:'auto',evidence:e}),/especializado/);
+  assert.throws(()=>assertInteriorRoute({mode:'interior',evidence:e}),/fachada exterior/);
+ });

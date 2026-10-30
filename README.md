@@ -1,4 +1,4 @@
-# Prodalam Render Pro v3.3.2
+# Prodalam Render Pro v3.4.0
 
 Aplicación local de preparación de planos y reconstrucción 3D. Repositorio de esta entrega: [sployola-wq/Render_2Dto3D](https://github.com/sployola-wq/Render_2Dto3D).
 
@@ -7,6 +7,63 @@ npm start
 ```
 
 Abrir **http://127.0.0.1:4173**. Los recursos del navegador se incluyen en `dist/vendor`; la vista estática no requiere instalar dependencias para iniciar. Node.js 20 o superior.
+
+## Cambios v3.4.0 · Identificación neuronal/geométrica de alzados y cortes, cierre volumétrico exterior, aberturas depuradas, extrusión escalonada y paquete de proyecto
+
+1. **Identificación inteligente de láminas (IA + geometría):** El clasificador neuronal CLIP (`backend/drawing_classifier.py`) prioriza la orientación erguida cuando detecta una fachada o corte arquitectónico con cubierta inclinada (`exterior`), evitando que las rotaciones laterales (`90°` / `270°`) confundan los recintos rectangulares del corte con una planta interior. Además, el detector geométrico (`dist/drawing-signals.js` y `dist/drawing-routing.js`) identifica faldones de cubierta opuestos y niveles en cortes/alzados, bloqueando el motor residencial de interiores en dibujos de alzado o sección.
+2. **Exteriores, fachadas y cortes escalonados (Paso 2 ↔ Paso 3):** El Paso 2 de disciplinas especializadas abre en la vista técnica frontal alineada con cortina comparativa (`technical` + `compare`). La envolvente exterior (`backend/exterior_envelope.py`, `dist/exterior-finishes.js`, `dist/source-volume.js`) conserva volúmenes escalonados no convexos (como cuerpos bajos con terraza junto a cubiertas a dos aguas), detecta vidrios tintados para perforar vanos reales con acristalamiento rehundido y añade cierre volumétrico posterior/inferior (`inferred-volume-closure` e `inferred-base-slab`).
+3. **Planta arquitectónica e interiores:** Se resuelven las 6 ventanas pendientes de revisión geométrica (`semantic-3`, `semantic-6`, `semantic-13`, `semantic-14`, `semantic-19`, `semantic-20`) y la fusión de la ventana vertical partida de cocina (`semantic-8 + semantic-9`) mediante continuidad de ejes en encuentros en T y depuración de jambas colineales (`pending: 0`, `geometryReviewCount: 0`, 10 puertas y 14 ventanas emparejadas con `IoU ≥ 0,50`).
+4. **Ingeniería, piezas mecánicas y paquete de proyecto:** Extrusión 3D escalonada por tramos (`steppedSegments`), lectura automática de entidades de cota (`DIMENSION`, `TEXT`, `MTEXT`) en DXF, detección de líneas de cota en láminas raster y guardado/apertura de paquetes completos de proyecto (`.renderpro.json`, esquema `prodalam.project.v1`) con verificación SHA-256. **232 pruebas Node y 5 suites Python aprobadas.**
+
+## Revisión v3.3.8 · Reconocimiento y correcciones verificables
+
+El reconocimiento compara hoja completa y contenido en varias orientaciones, normaliza el papel oscuro y permite volver a identificar la lámina. La fusión interior conserva detecciones válidas que antes se descartaban y separa conflictos para revisión. El Paso 2 continúa en cenital y permite corregir mobiliario, equipamiento y muros sobre el original, con deshacer y actualización del mismo modelo en Paso 3.
+
+Las fachadas que no ofrecen profundidad fiable conservan su análisis 2D en el Paso 2. El modelo genérico de v3.3.7 queda limitado al **Diseño conceptual** elegido expresamente. Todavía no se reconstruyen automáticamente todas las perspectivas ni se reconoce todo el equipamiento; esta revisión no certifica resultados para uso constructivo. [Pruebas, capturas y límites](reports/reconocimiento-y-correcciones-v3-3-8.md).
+
+Las secciones siguientes son históricas: las rutas predeterminadas y cifras de entregas anteriores no describen el comportamiento actual.
+
+## Corrección v3.3.7 · Fachadas regulares y render cenital
+
+El Paso 2 abre en vista cenital; la perspectiva es opcional. Los interiores conservan el reconocimiento neuronal y el mobiliario. Las fachadas en perspectiva usan muros y cubiertas regulares en vez de una silueta deformada con la imagen proyectada. Cubierta, plantas, profundidad y material son editables. La geometría inferida es una propuesta por revisar; no equivale a CAD recuperado de una fotografía.
+
+La instalación local incorpora un detector opcional de aberturas de fachada con pesos verificados. Véase la [validación v3.3.7](reports/fachadas-y-cenital-v3-3-7.md). Las secciones siguientes describen entregas anteriores; la envolvente de contorno de v3.3.6 fue sustituida.
+
+## Corrección v3.3.6 · Reconocimiento local y renders 3D
+
+El preview local incluye ahora los modelos de estructura/mobiliario y un clasificador visual CLIP. Instalar en macOS con `sh setup-local.sh` y arrancar con `npm start`. Las imágenes se procesan en el equipo; los pesos no se incluyen en GitHub Pages. La instalación descarga versiones verificadas desde las fuentes indicadas en el manifiesto.
+
+El tipo de lámina se selecciona automáticamente cuando el clasificador distingue una categoría con margen suficiente. Los casos ambiguos siguen requiriendo confirmación; se conserva la selección manual. Se probaron los archivos reales de los comentarios, dos fachadas adicionales y una lámina mecánica. Esto no equivale a una tasa de precisión universal.
+
+Los interiores vuelven a reconocer estructura y equipamiento y generan tanto el render cenital como una perspectiva en el Paso 2, usando el mismo modelo del Paso 3. El archivo interior reportado produjo 25 propuestas de equipamiento/mobiliario y 11 de puertas/ventanas en el flujo del navegador.
+
+La fachada reportada ya puede producir una envolvente continua con su contorno observado, cubierta, laterales y huecos de vidrio. La profundidad y las caras ocultas siguen siendo propuestas editables; no se recupera un CAD exacto de una sola perspectiva. El visor permite comparar los acabados del Paso 2 con materiales físicos.
+
+Ver [validación v3.3.6](reports/reconocimiento-v3-3-6.md). Las limitaciones y bloqueos v3.3.5 siguientes describen la entrega anterior.
+
+## Corrección v3.3.5 · Planta utilizable y rechazo de reconstrucciones falsas
+
+El plano interior reportado se procesa con su red de muros aunque no haya reconocimiento semántico de muebles. La confirmación de Interior y una red ortogonal conectada siguen siendo obligatorias; el resultado se identifica como **solo estructura** también en el Paso 3.
+
+La fachada reportada **todavía no tiene una reconstrucción automática fiable**. Se impide que un fallo de profundidad se sustituya por masas de otro edificio; el procesamiento se detiene con un diagnóstico y sin habilitar un modelo incorrecto. Los perfiles trazados y el diseño conceptual explícito siguen disponibles. Los alzados mantienen sus huecos físicos; se corrige una triangulación que podía tapar una ventana.
+
+Ver [validación y trabajo pendiente v3.3.5](reports/correcciones-v3-3-5.md). Las descripciones v3.3.4 siguientes son históricas; su propuesta de masas no resolvió la correspondencia de la fachada.
+
+## Corrección v3.3.4 · Edificio con geometría independiente
+
+El modo inicial de exteriores es **Edificio 3D · muros, cubierta y ventanas**. Se retira el relieve como sustitución automática del edificio. Las preferencias registradas de v3.3.3 migran al nuevo modo, conservando escala, profundidad y materiales; el relieve técnico permanece como elección explícita.
+
+En perspectivas con dos familias de aristas se estiman puntos de fuga y grupos de fachadas para proponer masas con profundidad. El modelo contiene muros gruesos, cubiertas, pisos, retornos, caras posteriores y huecos con vidrios y marcos independientes. En alzados se construye una envolvente del contorno con la profundidad especificada. **La fotografía del Paso 2 no se proyecta sobre estos cuerpos.** La propuesta conserva su geometría al orbitar y al exportar STL.
+
+La reconstrucción sigue siendo aproximada: las cotas y las zonas ocultas requieren revisión; no es recuperación exacta del edificio a partir de una imagen. La lámina completa permanece en el Paso 2. Ver [validación v3.3.4](reports/volumen-v3-3-4.md).
+
+## Corrección v3.3.3 · Estabilidad al girar y clasificación revisable
+
+El ajuste 3D incorpora las fronteras compartidas al resolver los planos. Antes de mostrar o exportar, comprueba planitud, coordenadas finitas y amplificación de bordes. Si la profundidad no es coherente, conserva la lámina como un relieve cerrado y lo indica en el visor y el JSON. El relieve **no equivale a reconstruir el edificio completo**; las ventanas son parte de la textura. Las caras compatibles conservan su reconstrucción espacial.
+
+La clasificación analiza trazos relativos al fondo, excluye marcos negros y busca verticales y direcciones en perspectiva. La simetría o el dibujo tenue dejan de autorizar por sí solos un motor. Las sugerencias dudosas requieren confirmar el tipo; una lámina desconocida queda sin procesar hasta seleccionarlo. Las vistas mecánicas complementarias requieren alineación y separación. La selección manual sigue disponible.
+
+La validación incluye la casa que motivó el reporte, el plano interior existente y las regresiones mecánicas/estructurales. No es una evaluación de precisión general sobre planos desconocidos. Ver [validación y límites](reports/estabilidad-v3-3-3.md).
 
 ## Corrección v3.3.2 · Continuidad del mismo proyecto entre Pasos 2 y 3
 

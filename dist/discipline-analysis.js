@@ -2,15 +2,27 @@ import { boundsOf, isSimplePolygon } from './technical-geometry.js';
 export const DISCIPLINES=Object.freeze({interior:'Interior · planta arquitectónica',exterior:'Exterior · fachada / alzado',mechanical:'Ingeniería · pieza / sección',structure:'Estructura · barras / pórticos'});
 export function assertDiscipline(value){if(!Object.hasOwn(DISCIPLINES,value))throw new Error('Disciplina no compatible.');return value;}
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+export function stripSheetBorder(mask,w,h){
+  const closed=morph(morph(mask,w,h,true),w,h,false);
+  const hasSheetFrame=components(closed,w,h,0).some(c=>!c.edge&&(c.bbox[2]-c.bbox[0])>w*.76&&(c.bbox[3]-c.bbox[1])>h*.76&&c.count>w*h*.24);
+  if(!hasSheetFrame)return mask;
+  const mx=Math.max(4,Math.round(w*.085)),my=Math.max(4,Math.round(h*.085));
+  const rowBand=y=>{let s=0;for(let x=0;x<w;x++)if(mask[y*w+x]||(y>0&&mask[(y-1)*w+x])||(y<h-1&&mask[(y+1)*w+x]))s++;return s/w;};
+  const colBand=x=>{let s=0;for(let y=0;y<h;y++)if(mask[y*w+x]||(x>0&&mask[y*w+x-1])||(x<w-1&&mask[y*w+x+1]))s++;return s/h;};
+  for(let y=0;y<h;y++)if((y<my||y>=h-my)&&rowBand(y)>=.42)for(let dy=-1;dy<=1;dy++){const yy=y+dy;if(yy>=0&&yy<h)for(let x=0;x<w;x++)mask[yy*w+x]=0;}
+  for(let x=0;x<w;x++)if((x<mx||x>=w-mx)&&colBand(x)>=.42)for(let dx=-1;dx<=1;dx++){const xx=x+dx;if(xx>=0&&xx<w)for(let y=0;y<h;y++)mask[y*w+xx]=0;}
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(x<2||x>=w-2||y<2||y>=h-2)mask[y*w+x]=0;
+  return mask;
+}
 export function drawingMask(image,{threshold=205,roi=null}={}){
   const {width,height,data}=image;if(!Number.isInteger(width)||!Number.isInteger(height)||width<2||height<2||width*height>2200000||data.length!==width*height*4)throw new Error('Marco de análisis no válido.');
   const mask=new Uint8Array(width*height),box=roi??[0,0,width,height];
   for(let y=Math.max(0,Math.floor(box[1]));y<Math.min(height,Math.ceil(box[3]));y++)for(let x=Math.max(0,Math.floor(box[0]));x<Math.min(width,Math.ceil(box[2]));x++){const i=y*width+x,k=i*4;mask[i]=data[k+3]>100&&.299*data[k]+.587*data[k+1]+.114*data[k+2]<threshold?1:0;}
-  return mask;
+  return roi?mask:stripSheetBorder(mask,width,height);
 }
 function morph(mask,w,h,dilate,r=1){const out=new Uint8Array(mask.length);for(let y=0;y<h;y++)for(let x=0;x<w;x++){let v=dilate?0:1;outer:for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){const a=x+dx,b=y+dy,hit=a>=0&&a<w&&b>=0&&b<h?mask[b*w+a]:0;if(dilate?hit:!hit){v=dilate?1:0;break outer;}}out[y*w+x]=v;}return out;}
 function components(mask,w,h,value=1){const seen=new Uint8Array(mask.length),queue=new Int32Array(mask.length),result=[];for(let start=0;start<mask.length;start++){if(seen[start]||mask[start]!==value)continue;let head=0,tail=1,edge=false,x0=w,y0=h,x1=0,y1=0;queue[0]=start;seen[start]=1;while(head<tail){const i=queue[head++],x=i%w,y=Math.floor(i/w);if(!x||!y||x===w-1||y===h-1)edge=true;x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x+1);y1=Math.max(y1,y+1);for(const j of [x?i-1:-1,x<w-1?i+1:-1,y?i-w:-1,y<h-1?i+w:-1])if(j>=0&&!seen[j]&&mask[j]===value){seen[j]=1;queue[tail++]=j;}}result.push({pixels:Int32Array.from(queue.subarray(0,tail)),count:tail,edge,bbox:[x0,y0,x1,y1]});}return result;}
-function fillClosed(mask,w,h){const out=new Uint8Array(mask);for(const c of components(mask,w,h,0))if(!c.edge)for(const i of c.pixels)out[i]=1;return out;}
+function fillClosed(mask,w,h){const out=new Uint8Array(mask);for(const c of components(mask,w,h,0)){const bw=c.bbox[2]-c.bbox[0],bh=c.bbox[3]-c.bbox[1];if(!c.edge&&!(bw>w*.74&&bh>h*.74)&&c.count<=w*h*.42)for(const i of c.pixels)out[i]=1;}return out;}
 function simplify(points,tolerance=1.5){if(points.length<4)return points;const first=points[0],last=points.at(-1),dx=last[0]-first[0],dy=last[1]-first[1],den=dx*dx+dy*dy;let best=tolerance,index=-1;for(let i=1;i<points.length-1;i++){const p=points[i],t=den?clamp(((p[0]-first[0])*dx+(p[1]-first[1])*dy)/den,0,1):0,d=Math.hypot(p[0]-first[0]-t*dx,p[1]-first[1]-t*dy);if(d>best){best=d;index=i;}}return index<0?[first,last]:[...simplify(points.slice(0,index+1),tolerance).slice(0,-1),...simplify(points.slice(index),tolerance)];}
 function contour(mask,w,h,tolerance=1.3){const edges=new Map(),key=(x,y)=>y*(w+1)+x,add=(x,y,a,b)=>{const k=key(x,y);if(!edges.has(k))edges.set(k,[]);edges.get(k).push(key(a,b));};for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(mask[y*w+x]){if(!y||!mask[(y-1)*w+x])add(x,y,x+1,y);if(x===w-1||!mask[y*w+x+1])add(x+1,y,x+1,y+1);if(y===h-1||!mask[(y+1)*w+x])add(x+1,y+1,x,y+1);if(!x||!mask[y*w+x-1])add(x,y+1,x,y);}let best=[];while(edges.size){const start=edges.keys().next().value,ring=[];let p=start;for(let i=0;i<mask.length*4;i++){ring.push([p%(w+1),Math.floor(p/(w+1))]);const e=edges.get(p);if(!e?.length)break;const next=e.pop();if(!e.length)edges.delete(p);p=next;if(p===start)break;}if(ring.length>best.length)best=ring;}const closed=[...best,best[0]];return best.length>3?simplify(closed,tolerance).slice(0,-1):[];}
 export function extractDrawing(image,{roi=null,threshold=205}={}){

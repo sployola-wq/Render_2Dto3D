@@ -15,14 +15,14 @@ export const server = http.createServer(async (req, res) => {
     const pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
     const json=(status,payload)=>res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'}).end(JSON.stringify(payload));
     if(pathname==='/api/health'&&req.method==='GET')return json(200,await localEngine.health());
-    if(pathname==='/api/analyze'){
+    if(pathname==='/api/analyze'||pathname==='/api/classify'){
       if(req.method!=='POST')return json(405,{error:'Usa POST para analizar el plano.'});
       const origin=req.headers.origin,port=server.address().port;
       if(req.headers['sec-fetch-site']==='cross-site'||origin&&![`http://127.0.0.1:${port}`,`http://localhost:${port}`].includes(origin))return json(403,{error:'Origen no permitido.'});
       const mime=req.headers['content-type']?.split(';')[0];if(!['image/jpeg','image/png','image/webp'].includes(mime))return json(415,{error:'Se requiere una imagen JPEG, PNG o WEBP.'});
       let size=0;const chunks=[];for await(const chunk of req){size+=chunk.length;if(size>20*1024*1024){json(413,{error:'El plano supera 20 MB.'});req.resume();return;}chunks.push(chunk);}
       if(!size)return json(400,{error:'La imagen está vacía.'});
-      const result=await localEngine.analyze(Buffer.concat(chunks),mime);return json(result.status,result.data);
+      const result=await localEngine.analyze(Buffer.concat(chunks),mime,undefined,pathname);return json(result.status,result.data);
     }
     if(pathname==='/api/cgi/status'&&req.method==='GET')return json(200,{provider:'OpenAI',ready:!!process.env.OPENAI_API_KEY&&process.env.OPENAI_API_KEY!=='YOUR_OPENAI_API_KEY',model:process.env.OPENAI_IMAGE_MODEL||'gpt-image-2.5-sunburst'});
     if(pathname==='/api/cgi/render'){

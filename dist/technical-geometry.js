@@ -29,9 +29,21 @@ export function vectorSVG(data,width,height,lineWidth=1){
   for(const p of data.paths??[])paths.push(p.points.map(([x,y],i)=>`${i?'L':'M'}${x},${y}`).join(' ')+(p.closed?'Z':''));
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}"><title>Prodalam Render Pro v2.0 — Vectores de análisis</title><g fill="none" stroke="#005b9a" stroke-width="${lineWidth}" stroke-linejoin="round">${paths.map(d=>`<path d="${d}"/>`).join('')}</g></svg>`;
 }
+export function parseDimensionText(rawText){
+  if(typeof rawText!=='string')return null;
+  const clean=rawText.replace(/\\[A-Za-z][^;]*;/g,'').replace(/[{}]/g,'').trim();
+  if(!clean||/^(?:escala|scale|rev|iso|din|ansi|nota|plano|sheet)\b/i.test(clean))return null;
+  const match=clean.match(/^(?:([Ø⌀∅]|DIA\.?|R|RAD\.?)\s*)?(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?$/i);
+  if(!match)return null;
+  const value=Number(match[2].replace(',','.'));
+  if(!Number.isFinite(value)||value<=0)return null;
+  const prefix=(match[1]??'').toUpperCase(),kind=prefix.startsWith('R')?'radius':prefix?'diameter':'linear';
+  const unit=match[3]?match[3].toLowerCase():'mm',mm=unit==='m'?value*1000:unit==='cm'?value*10:value;
+  return {raw:clean,rawText:clean,value,unit,mm,kind,diameter:kind==='diameter',radius:kind==='radius'};
+}
 /** DXF 2D tessellation; unsupported entities are reported rather than silently lost. */
 export function dxfPaths(document){
-  const paths=[],unsupported=new Set();let budget=0;
+  const paths=[],dimensions=[],unsupported=new Set();let budget=0;
   const transform=(p,m)=>[m[0]*p[0]+m[2]*p[1]+m[4],m[1]*p[0]+m[3]*p[1]+m[5]];
   const multiply=(a,b)=>[a[0]*b[0]+a[2]*b[1],a[1]*b[0]+a[3]*b[1],a[0]*b[2]+a[2]*b[3],a[1]*b[2]+a[3]*b[3],a[0]*b[4]+a[2]*b[5]+a[4],a[1]*b[4]+a[3]*b[5]+a[5]];
   function visit(entities,m=[1,0,0,1,0,0],depth=0){
@@ -42,6 +54,16 @@ export function dxfPaths(document){
         const block=document.blocks?.[e.name];if(!block){unsupported.add('INSERT sin bloque');continue;}
         const r=(e.rotation??0)*Math.PI/180,c=Math.cos(r),s=Math.sin(r),sx=e.xScale??1,sy=e.yScale??1,p=e.position??{x:0,y:0},base=block.position??{x:0,y:0};
         const local=[c*sx,s*sx,-s*sy,c*sy,p.x-c*sx*base.x+s*sy*base.y,p.y-s*sx*base.x-c*sy*base.y];visit(block.entities,multiply(m,local),depth+1);continue;
+      }
+      if(['TEXT','MTEXT','DIMENSION'].includes(e.type)){
+        const raw=e.text??e.string??(Number.isFinite(e.actualMeasurement)?String(e.actualMeasurement):'');
+        const parsed=parseDimensionText(raw);
+        if(parsed){
+          const pos=e.startPoint??e.position??e.textMidPoint??e.anchorPoint??{x:0,y:0};
+          const a=e.linearOrAngularPoint1??e.definitionPoint1,b=e.linearOrAngularPoint2??e.definitionPoint2;
+          const pts=a&&b?[transform([a.x,a.y],m),transform([b.x,b.y],m)]:null;
+          dimensions.push({...parsed,position:transform([pos.x??0,pos.y??0],m),points:pts,span:pts?distance(pts[0],pts[1]):null,layer:e.layer??'0',entityType:e.type});
+        }
       }
       let points=[],closed=false;
       if(['LINE','LWPOLYLINE','POLYLINE'].includes(e.type)){
@@ -68,7 +90,7 @@ export function dxfPaths(document){
   visit(document.entities);
   if(!paths.length)throw new Error('El DXF no contiene trazos 2D compatibles.');
   const bounds=boundsOf(paths.flatMap(p=>p.points));
-  return {paths,bounds,unsupported:[...unsupported],units:document.header?.$INSUNITS??0};
+  return {paths,bounds,unsupported:[...unsupported],units:document.header?.$INSUNITS??0,dimensions};
 }
 export function isSimplePolygon(points){
   if(points.length<3||polygonMetrics(points).area<1)return false;

@@ -1,4 +1,4 @@
-import {morphology,connectedRegions,traceContour,validateClosedProfile} from './discipline-analysis.js';
+import {morphology,connectedRegions,traceContour,validateClosedProfile,stripSheetBorder} from './discipline-analysis.js';
 import {boundsOf} from './technical-geometry.js';
 
 /** Keep geometry strokes apart from coloured dimensions and centre lines.
@@ -12,18 +12,20 @@ export function engineeringInk(image,{threshold=248,channel='neutral',roi=null}=
     const chromatic=hi-lo>28&&hi-lo>hi*.16;if(chromatic)coloured++;
     ink[i]=channel==='all'||!chromatic||hi<45?1:0;
   }
-  return {ink,colouredFraction:coloured/Math.max(1,total)};
+  return {ink:roi?ink:stripSheetBorder(ink,w,h),colouredFraction:coloured/Math.max(1,total)};
 }
 export function profileFromRegion(region,closed,w,h){
   const mask=new Uint8Array(w*h);for(const i of region.pixels)mask[i]=1;
   const outer=traceContour(mask,w,h,1.1),bounds=boundsOf(outer),holes=[],safe=morphology(mask,w,h,false,3);
+  validateClosedProfile({outer,holes:[]});
   for(const hole of connectedRegions(closed,w,h,0)){
     if(hole.edge||hole.count<10||hole.count>region.count*.18)continue;
     const [x0,y0,x1,y1]=hole.bbox,pad=Math.max(2,Math.min(bounds.width,bounds.height)*.035);
     if(x0<bounds.x0+pad||x1>bounds.x1-pad||y0<bounds.y0+pad||y1>bounds.y1-pad)continue;
     if(!mask[Math.floor((y0+y1)/2)*w+Math.floor((x0+x1)/2)])continue;
     if(hole.pixels.some(i=>!safe[i]))continue;
-    const m=new Uint8Array(w*h);for(const i of hole.pixels)m[i]=1;const ring=traceContour(m,w,h,.5);if(ring.length>=3)holes.push(ring);
+    const m=new Uint8Array(w*h);for(const i of hole.pixels)m[i]=1;const ring=traceContour(m,w,h,.5);
+    if(ring.length>=3){try{validateClosedProfile({outer,holes:[...holes,ring]});holes.push(ring);}catch{}}
   }
   const profile={outer,holes,source:'engineering-contour'};validateClosedProfile(profile);
   return {profile,mask,bounds};
@@ -115,11 +117,100 @@ function dimensionSeparatedPair(image,closed,roi){
   return null;
 }
 
+function viewSymmetry(mask,b,w,h){
+  const cx=Math.round((b.x0+b.x1)/2),cy=Math.round((b.y0+b.y1)/2);let vBoth=0,vTot=0,hBoth=0,hTot=0;
+  for(let y=Math.ceil(b.y0);y<Math.floor(b.y1);y++)for(let x=Math.ceil(b.x0);x<Math.floor(b.x1);x++){
+    const a=mask[y*w+x],mx=2*cx-x,my=2*cy-y;
+    if(mx>=0&&mx<w&&(a||mask[y*w+mx])){vTot++;if(a&&mask[y*w+mx])vBoth++;}
+    if(my>=0&&my<h&&(a||mask[my*w+x])){hTot++;if(a&&mask[my*w+x])hBoth++;}
+  }
+  return {vertical:vTot?vBoth/vTot:0,horizontal:hTot?hBoth/hTot:0};
+}
+function detectCompoundHousing(image,views,ink){
+  const w=image.width,h=image.height;let best=null;
+  for(const a of views)for(const b of views){
+    if(a===b)continue;
+    const disjoint=a.bounds.y1<b.bounds.y0||b.bounds.y1<a.bounds.y0;
+    if(!disjoint)continue;
+    const extent=Math.max(a.bounds.width,b.bounds.width),diff=Math.abs(a.bounds.width-b.bounds.width)/Math.max(1,extent);
+    const aligned=Math.abs(a.bounds.x0-b.bounds.x0)<extent*.18&&Math.abs(a.bounds.x1-b.bounds.x1)<extent*.18;
+    if(!aligned||diff>.2||extent<Math.max(34,Math.min(w,h)*.14))continue;
+    if(a.fill<.38||a.fill>.82||b.fill<.66)continue;
+    const planAspect=b.bounds.width/Math.max(1,b.bounds.height);
+    if(planAspect<.74||planAspect>1.34)continue;
+    const tx0=Math.floor(a.bounds.x0),ty0=Math.floor(a.bounds.y0),tx1=Math.ceil(a.bounds.x1),ty1=Math.ceil(a.bounds.y1),th=ty1-ty0;
+    const spans=[];
+    for(let y=ty0;y<ty1;y++){let lo=Infinity,hi=-1;for(let x=tx0;x<tx1;x++)if(a.mask[y*w+x]){lo=Math.min(lo,x);hi=x+1;}if(hi>lo)spans.push({y,lo,hi,width:hi-lo});}
+    if(spans.length<16)continue;
+    const maxW=Math.max(...spans.map(s=>s.width)),flangeRows=spans.filter(s=>s.y>=ty0+th*.72&&s.width>=maxW*.82);
+    if(flangeRows.length<3)continue;
+    const flangeY0=Math.min(...flangeRows.map(s=>s.y)),flangeH=ty1-flangeY0;
+    if(flangeH<th*.07||flangeH>th*.32)continue;
+    const midRows=spans.filter(s=>s.y>=ty0+th*.22&&s.y<flangeY0-2);
+    if(midRows.length<8)continue;
+    const sortedLo=midRows.map(s=>s.lo).sort((u,v)=>u-v),sortedHi=midRows.map(s=>s.hi).sort((u,v)=>u-v);
+    const barrelX0=sortedLo[Math.floor(sortedLo.length*.72)],barrelX1=sortedHi[Math.floor(sortedHi.length*.28)],barrelW=barrelX1-barrelX0;
+    if(barrelW<maxW*.38||barrelW>maxW*.78)continue;
+    const barrelCx=(barrelX0+barrelX1)/2,outerR=barrelW/2;
+    if(Math.abs(barrelCx-(tx0+tx1)/2)>maxW*.12)continue;
+    const colTop=[];
+    for(let x=barrelX0;x<barrelX1;x++){let yMin=ty1;for(let y=ty0;y<ty1;y++)if(a.mask[y*w+x]){yMin=y;break;}colTop.push({x,yMin});}
+    const yTopLeft=Math.min(...colTop.slice(0,Math.max(2,Math.floor(colTop.length*.25))).map(c=>c.yMin));
+    const yTopRight=Math.max(...colTop.slice(-Math.max(2,Math.floor(colTop.length*.2))).map(c=>c.yMin));
+    const slopeStart=colTop.find(c=>c.yMin>yTopLeft+1.5)?.x??barrelCx;
+    const boreSamples=[];
+    for(let y=Math.max(ty0,flangeY0-Math.round(th*.28));y<flangeY0-2;y++){
+      let lIn=barrelX0,rIn=barrelX1;
+      for(let x=barrelX0;x<Math.floor(barrelCx);x++)if(ink[y*w+x])lIn=x+1;
+      for(let x=barrelX1;x>Math.ceil(barrelCx);x--)if(ink[y*w+x])rIn=x;
+      if(rIn-lIn>outerR*.85&&rIn-lIn<outerR*1.72)boreSamples.push(rIn-lIn);
+    }
+    const innerR=boreSamples.length?boreSamples.sort((u,v)=>u-v)[Math.floor(boreSamples.length/2)]/2:outerR*.72;
+    const leftRows=spans.filter(s=>s.y>yTopLeft+2&&s.y<flangeY0-2&&s.lo<barrelX0-1.5);
+    const rightRows=spans.filter(s=>s.y>yTopRight+2&&s.y<flangeY0-2&&s.hi>barrelX1+1.5);
+    const leftCy=leftRows.length?(leftRows[0].y+leftRows.at(-1).y)/2:ty0+th*.38;
+    const leftR=leftRows.length?Math.max(outerR*.42,Math.min(outerR*.68,(leftRows.at(-1).y-leftRows[0].y)/2)):outerR*.55;
+    const leftExt=leftRows.length?Math.max(3,barrelX0-Math.min(...leftRows.map(s=>s.lo))):outerR*.28;
+    const rightCy=rightRows.length?(rightRows[0].y+rightRows.at(-1).y)/2:ty0+th*.62;
+    const rightR=rightRows.length?Math.max(outerR*.22,Math.min(outerR*.48,(rightRows.at(-1).y-rightRows[0].y)/2)):outerR*.28;
+    const rightExt=rightRows.length?Math.max(2.5,Math.max(...rightRows.map(s=>s.hi))-barrelX1):outerR*.2;
+    const bosses=[
+      {id:'front-port',dir:[0,1],cy:leftCy,outerRadiusPx:leftR,innerRadiusPx:leftR*.58,protrusionPx:leftExt},
+      {id:'rear-port',dir:[0,-1],cy:leftCy,outerRadiusPx:leftR,innerRadiusPx:leftR*.58,protrusionPx:leftExt},
+      {id:'left-port',dir:[-1,0],cy:leftCy,outerRadiusPx:leftR,innerRadiusPx:leftR*.58,protrusionPx:leftExt},
+      {id:'right-port',dir:[1,0],cy:rightCy,outerRadiusPx:rightR,innerRadiusPx:rightR*.56,protrusionPx:rightExt}
+    ];
+    const ratio=a.bounds.width/Math.max(1,b.bounds.width),flangeDepthPx=b.bounds.height*ratio,cornerRadiusPx=maxW*.11;
+    const boltOffsetX=maxW*.385,boltOffsetZ=flangeDepthPx*.385,boltRadiusPx=Math.max(2.4,maxW*.044);
+    const planCx=(b.bounds.x0+b.bounds.x1)/2,planCy=(b.bounds.y0+b.bounds.y1)/2,planOffX=b.bounds.width*.385,planOffY=b.bounds.height*.385,planBoltR=Math.max(2.2,b.bounds.width*.044);
+    const planBoltCircles=[];
+    for(const sx of[-1,1])for(const sy of[-1,1])planBoltCircles.push({center:[planCx+sx*planOffX,planCy+sy*planOffY],radius:planBoltR,score:30,source:'plan-corner-bolt-hole'});
+    const score=extent*(1-diff)*(a.bounds.y0<b.bounds.y0?1.15:1);
+    if(!best||score>best.score){
+      best={score,selected:a,companion:b,planBoltCircles,compoundHousing:{
+        flangeWidthPx:maxW,flangeDepthPx,flangeHeightPx:flangeH,cornerRadiusPx,
+        boltHoles:[[-boltOffsetX,-boltOffsetZ],[boltOffsetX,-boltOffsetZ],[-boltOffsetX,boltOffsetZ],[boltOffsetX,boltOffsetZ]].map(([dx,dz])=>({dx,dz,radiusPx:boltRadiusPx})),
+        barrelCx,outerRadiusPx:outerR,innerRadiusPx:innerR,heightPx:th,
+        topCut:{slopeStartPx:slopeStart,yTopLeftPx:yTopLeft,yTopRightPx:yTopRight},
+        bosses,companionId:b.id,companionBounds:b.bounds
+      }};
+    }
+  }
+  return best;
+}
+
 /** Distinct closed views are extracted before choosing a modelling operation.
  * A sparse CAD section is not evidence for an axial, hatched assembly. */
 export function analyzeEngineeringDrawing(image,{roi=null,channel='neutral',threshold=248,detectHoles=true}={}){
-  const {width:w,height:h}=image,pre=engineeringInk(image,{roi,channel,threshold}),restored=channel==='neutral'?restoreStrokes(image,pre.ink,roi,threshold):pre.ink,closed=morphology(morphology(restored,w,h,true),w,h,false),neutralClosed=morphology(morphology(pre.ink,w,h,true),w,h,false);let filled=new Uint8Array(closed);
-  for(const r of connectedRegions(closed,w,h,0))if(!r.edge)for(const i of r.pixels)filled[i]=1;
+  const {width:w,height:h}=image,pre=engineeringInk(image,{roi,channel,threshold});
+  let baseInk=pre.ink;
+  if(channel==='neutral'&&pre.colouredFraction<.05&&threshold>=240){
+    const core=engineeringInk(image,{roi,channel,threshold:202}).ink;
+    let preSum=0,coreSum=0;for(let i=0;i<core.length;i++){preSum+=pre.ink[i];coreSum+=core[i];}
+    if(coreSum>w*h*.004&&(preSum-coreSum)/Math.max(1,preSum)>.16)baseInk=core;
+  }
+  const restored=channel==='neutral'&&baseInk===pre.ink?restoreStrokes(image,baseInk,roi,threshold):baseInk,closed=morphology(morphology(restored,w,h,true),w,h,false),neutralClosed=morphology(morphology(baseInk,w,h,true),w,h,false);let filled=new Uint8Array(closed);
+  for(const r of connectedRegions(closed,w,h,0)){const bw=r.bbox[2]-r.bbox[0],bh=r.bbox[3]-r.bbox[1];if(!r.edge&&!(bw>w*.74&&bh>h*.74)&&r.count<=w*h*.42)for(const i of r.pixels)filled[i]=1;}
   const cleaned=morphology(morphology(filled,w,h,false,2),w,h,true,2),fragile=connectedRegions(filled,w,h).filter(r=>r.count>35&&r.pixels.reduce((sum,i)=>sum+cleaned[i],0)<r.count*.65);
   if(fragile.length){const fine=morphology(morphology(filled,w,h,false),w,h,true);for(const r of fragile)for(const i of r.pixels)cleaned[i]=fine[i];}filled=cleaned;
   const views=[];
@@ -136,16 +227,24 @@ export function analyzeEngineeringDrawing(image,{roi=null,channel='neutral',thre
   }
   if(channel==='all'||pre.colouredFraction<.04){const pair=dimensionSeparatedPair(image,pre.ink,roi)??dimensionSeparatedPair(image,closed,roi);if(pair)views.splice(0,views.length,...pair);}
   const main=views[0];if(!main&&channel==='neutral'&&pre.colouredFraction>.7)return analyzeEngineeringDrawing(image,{roi,channel:'all',threshold,detectHoles});if(!main)return {views:[],selectedId:null,recommendedOperation:null,colouredFraction:pre.colouredFraction};
-  let selected=main,companion=null,alignedAxis='y',bestScore=0;
-  for(const a of views)for(const b of views)for(const [axis,dimension]of[['y','height'],['x','width']]){const extent=a.bounds[dimension],difference=Math.abs(extent-b.bounds[dimension])/Math.max(extent,b.bounds[dimension]),score=extent*(1-difference);if(a!==b&&a.fill<.4&&b.fill>.65&&extent>60&&difference<.12&&score>bestScore){selected=a;companion=b;alignedAxis=axis;bestScore=score;}}
+  let selected=main,companion=null,alignedAxis='y',bestScore=0,compound=null;
+  for(const a of views)for(const b of views)for(const [axis,dimension]of[['y','height'],['x','width']]){const extent=a.bounds[dimension],difference=Math.abs(extent-b.bounds[dimension])/Math.max(extent,b.bounds[dimension]),score=extent*(1-difference),across=axis==='x'?'y':'x',disjoint=a.bounds[across+'1']<b.bounds[across+'0']||b.bounds[across+'1']<a.bounds[across+'0'],aligned=Math.abs(a.bounds[axis+'0']-b.bounds[axis+'0'])<extent*.1&&Math.abs(a.bounds[axis+'1']-b.bounds[axis+'1'])<extent*.1;if(a!==b&&disjoint&&aligned&&a.fill<.4&&b.fill>.65&&extent>60&&difference<.12&&score>bestScore){selected=a;companion=b;alignedAxis=axis;bestScore=score;}}
+  if(!companion){
+    compound=detectCompoundHousing(image,views,baseInk);
+    if(compound){selected=compound.selected;companion=compound.companion;alignedAxis='x';}
+  }
   let totalInk=0,pairInk=0,x0=w,y0=h,x1=0,y1=0;
-  for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(pre.ink[y*w+x]){totalInk++;x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x+1);y1=Math.max(y1,y+1);if([selected,companion].some(v=>v&&x>=v.bounds.x0&&x<v.bounds.x1&&y>=v.bounds.y0&&y<v.bounds.y1))pairInk++;}
-  const inkSupport=pairInk/Math.max(1,totalInk),extentSupport=selected.bounds[alignedAxis==='x'?'width':'height']/Math.max(1,alignedAxis==='x'?x1-x0:y1-y0),dimensionSeparated=selected.profile.source==='dimension-separated-contour'&&companion?.profile.source==='confirmed-orthographic-outline',mechanicalEvidence={inkSupport,extentSupport,dimensionSeparated,strong:!!companion&&inkSupport>=(dimensionSeparated?.25:.35)&&extentSupport>=.5};
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(baseInk[y*w+x]){totalInk++;x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x+1);y1=Math.max(y1,y+1);if([selected,companion].some(v=>v&&x>=v.bounds.x0&&x<v.bounds.x1&&y>=v.bounds.y0&&y<v.bounds.y1))pairInk++;}
+  const inkSupport=pairInk/Math.max(1,totalInk),extentSupport=selected.bounds[alignedAxis==='x'?'width':'height']/Math.max(1,alignedAxis==='x'?x1-x0:y1-y0),dimensionSeparated=selected.profile.source==='dimension-separated-contour'&&companion?.profile.source==='confirmed-orthographic-outline',mechanicalEvidence={inkSupport,extentSupport,dimensionSeparated,compoundHousing:!!compound,strong:!!companion&&(!!compound||inkSupport>=(dimensionSeparated?.25:.35)&&extentSupport>=.5)};
   const multiView=views.length>=2&&mechanicalEvidence.strong,colouredCAD=pre.colouredFraction>.12;
-  if(!multiView){selected=main;companion=null;}
-  if(detectHoles&&companion)companion.circles=colourCircles(image,companion);
+  if(!multiView){selected=main;companion=null;compound=null;}
+  if(detectHoles&&companion){
+    companion.circles=colourCircles(image,companion);
+    if(compound&&!companion.circles.length)companion.circles=compound.planBoltCircles;
+  }
+  const sym=viewSymmetry(selected.mask,selected.bounds,w,h),recommendedOrientation=compound||sym.vertical>sym.horizontal+.08||selected.bounds.height>selected.bounds.width*1.15?'vertical':'horizontal';
   const sparse=selected.inkDensity<.25||selected.fill<.4;
-  return {views,channel,alignedAxis,mechanicalEvidence,selectedId:selected.id,companionId:companion?.id??null,recommendedOperation:multiView||sparse?'extrude':'revolve',colouredFraction:pre.colouredFraction,multiView,colouredCAD,source:'closed-engineering-views'};
+  return {views,channel,alignedAxis,mechanicalEvidence,selectedId:selected.id,companionId:companion?.id??null,compoundHousing:compound?.compoundHousing??null,recommendedOrientation,recommendedOperation:compound?'revolve':multiView||sparse?'extrude':'revolve',colouredFraction:pre.colouredFraction,multiView,colouredCAD,source:'closed-engineering-views'};
 }
 export function smoothThinRasterProfile(image,view,axis='y'){
   if(view.fill>=.35||view.profile.holes.length)return null;
@@ -162,7 +261,8 @@ export function drawingFromEngineeringView(image,analysis,id,{holes=false,smooth
   const treated=smooth?smoothThinRasterProfile(image,view,analysis.multiView?analysis.alignedAxis:view.bounds.height>=view.bounds.width?'y':'x'):null;
   let profile={...(treated??view.profile),holes:[...view.profile.holes]};const proposedHoles=[];
   if(holes)for(const circle of view.circles){const ring=Array.from({length:64},(_,i)=>[circle.center[0]+circle.radius*Math.cos(i*Math.PI/32),circle.center[1]+circle.radius*Math.sin(i*Math.PI/32)]),candidate={...profile,holes:[...profile.holes,ring]};try{validateClosedProfile(candidate);profile=candidate;proposedHoles.push(circle);}catch{/* Existing holes and ambiguous circles keep their original interpretation. */}}
-  return {width:image.width,height:image.height,ink,mask:view.mask,outline:profile.outer,profiles:[profile],proposedHoles,bounds:view.bounds,faces:[],roi:[view.bounds.x0,view.bounds.y0,view.bounds.x1,view.bounds.y1],tones:{dark:0,lightGray:0},engineeringView:view.id};
+  const compoundHousing=view.id===analysis.selectedId?analysis.compoundHousing??null:null;
+  return {width:image.width,height:image.height,ink,mask:view.mask,outline:profile.outer,profiles:[profile],proposedHoles,bounds:view.bounds,faces:[],roi:[view.bounds.x0,view.bounds.y0,view.bounds.x1,view.bounds.y1],tones:{dark:0,lightGray:0},engineeringView:view.id,compoundHousing};
 }
 
 /** A companion orthographic view supplies an explicit relative extrusion width.
@@ -170,11 +270,104 @@ export function drawingFromEngineeringView(image,analysis,id,{holes=false,smooth
 export function engineeringExtrusion(image,analysis,viewId){
   if(!analysis.multiView||viewId!==analysis.selectedId)return null;
   const side=analysis.views.find(v=>v.id===viewId),front=analysis.views.find(v=>v.id===analysis.companionId),w=image.width,rows=[],horizontal=analysis.alignedAxis==='x',along=horizontal?'x':'y',across=horizontal?'y':'x',dimension=horizontal?'width':'height';
-  for(let v=Math.ceil(front.bounds[along+'0'])+2;v<front.bounds[along+'1']-2;v++){let lo=Infinity,hi=-1;for(let u=Math.floor(front.bounds[across+'0']);u<front.bounds[across+'1'];u++)if(front.mask[horizontal?u*w+v:v*w+u]){lo=Math.min(lo,u);hi=u+1;}if(hi>lo)rows.push([lo,hi]);}
+  const startV=Math.ceil(front.bounds[along+'0'])+2,endV=Math.floor(front.bounds[along+'1'])-2;
+  for(let v=startV;v<endV;v++){let lo=Infinity,hi=-1;for(let u=Math.floor(front.bounds[across+'0']);u<front.bounds[across+'1'];u++)if(front.mask[horizontal?u*w+v:v*w+u]){lo=Math.min(lo,u);hi=u+1;}if(hi>lo)rows.push([lo,hi,v]);}
   if(!rows.length)return null;
   const median=a=>a.sort((x,y)=>x-y)[Math.floor(a.length/2)],left=median(rows.map(r=>r[0])),right=median(rows.map(r=>r[1])),ratio=side.bounds[dimension]/front.bounds[dimension];
   if(!(right>left))return null;
-  return {source:'companion-orthographic-view',alignedAxis:analysis.alignedAxis,widthPixels:(right-left)*ratio,companionId:front.id,companionBounds:front.bounds,companionAcrossStart:left,proposed:true,holes:front.circles.map(c=>({[along]:side.bounds[along+'0']+(c.center[horizontal?0:1]-front.bounds[along+'0'])*ratio,zPixels:(c.center[horizontal?1:0]-left)*ratio,radiusPixels:c.radius*ratio,source:c.source,proposed:true}))};
+  const rawSegments=[];
+  for(const [lo,hi,v] of rows){
+    const width=hi-lo,last=rawSegments.at(-1);
+    if(last&&v-last.v1<=2&&Math.abs(width-last.width)<=2.5&&Math.abs(lo-last.lo)<=2.5){
+      last.v1=v+1;last.samples.push([lo,hi]);
+      last.lo=median(last.samples.map(s=>s[0]));last.hi=median(last.samples.map(s=>s[1]));last.width=last.hi-last.lo;
+    }else rawSegments.push({v0:v,v1:v+1,lo,hi,width,samples:[[lo,hi]]});
+  }
+  const minSegLen=Math.max(5,front.bounds[dimension]*.12),filtered=rawSegments.filter(s=>s.v1-s.v0>=minSegLen),merged=[];
+  for(const seg of filtered){
+    const prev=merged.at(-1);
+    if(prev&&Math.abs(seg.width-prev.width)<=3&&Math.abs(seg.lo-prev.lo)<=3){
+      prev.v1=seg.v1;prev.samples.push(...seg.samples);
+      prev.lo=median(prev.samples.map(s=>s[0]));prev.hi=median(prev.samples.map(s=>s[1]));prev.width=prev.hi-prev.lo;
+    }else merged.push({...seg});
+  }
+  let steppedSegments=null;
+  if(merged.length>=2){
+    const widths=merged.map(s=>s.width),minW=Math.min(...widths),maxW=Math.max(...widths),covered=merged.reduce((sum,s)=>sum+(s.v1-s.v0),0);
+    if(maxW-minW>=Math.max(6,(right-left)*.18)&&covered>=(endV-startV)*.7){
+      steppedSegments=merged.map((s,i)=>{
+        const v0=i===0?front.bounds[along+'0']:(.5*(merged[i-1].v1+s.v0));
+        const v1=i===merged.length-1?front.bounds[along+'1']:(.5*(s.v1+merged[i+1].v0));
+        return {
+          alongStart:side.bounds[along+'0']+(v0-front.bounds[along+'0'])*ratio,
+          alongEnd:side.bounds[along+'0']+(v1-front.bounds[along+'0'])*ratio,
+          widthPixels:s.width*ratio,
+          zOffsetPixels:(s.lo-left)*ratio
+        };
+      });
+    }
+  }
+  return {source:'companion-orthographic-view',alignedAxis:analysis.alignedAxis,widthPixels:(right-left)*ratio,companionId:front.id,companionBounds:front.bounds,companionAcrossStart:left,steppedSegments,proposed:true,holes:front.circles.map(c=>({[along]:side.bounds[along+'0']+(c.center[horizontal?0:1]-front.bounds[along+'0'])*ratio,zPixels:(c.center[horizontal?1:0]-left)*ratio,radiusPixels:c.radius*ratio,source:c.source,proposed:true}))};
+}
+
+/** Detect witness-capped dimension spans in raster sheets and pair them with
+ * parsed CAD/dimension values when available to propose a physical scale. */
+export function detectDrawingDimensions(image,analysis,{dxfDimensions=[]}={}){
+  const views=analysis?.views??[],spans=[];
+  if(image?.data&&image.width>=16&&image.height>=16){
+    const w=image.width,h=image.height,all=engineeringInk(image,{channel:'all'}).ink,neutral=engineeringInk(image,{channel:'neutral'}).ink;
+    const aux=new Uint8Array(w*h);
+    for(let i=0;i<w*h;i++){
+      const x=i%w,y=Math.floor(i/w),inView=views.some(v=>x>=v.bounds.x0+2&&x<v.bounds.x1-2&&y>=v.bounds.y0+2&&y<v.bounds.y1-2);
+      if(all[i]&&(!neutral[i]||!inView))aux[i]=1;
+    }
+    const hasTick=(axis,u,v)=>{
+      let hits=0;
+      for(let d=-5;d<=5;d++){
+        const x=axis==='x'?u:v+d,y=axis==='x'?v+d:u;
+        if(x>=0&&x<w&&y>=0&&y<h&&all[y*w+x])hits++;
+      }
+      return hits>=3;
+    };
+    for(const axis of ['x','y']){
+      const major=axis==='x'?h:w,minor=axis==='x'?w:h;
+      for(let v=4;v<major-4;v++){
+        let runStart=-1;
+        for(let u=4;u<=minor-4;u++){
+          const on=u<minor-4&&aux[axis==='x'?v*w+u:u*w+v];
+          if(on&&runStart<0)runStart=u;
+          else if(!on&&runStart>=0){
+            const span=u-runStart;
+            if(span>=24&&hasTick(axis,runStart,v)&&hasTick(axis,u-1,v)){
+              const matchedView=views.find(vw=>{
+                const lo=axis==='x'?vw.bounds.x0:vw.bounds.y0,hi=axis==='x'?vw.bounds.x1:vw.bounds.y1;
+                return Math.abs(runStart-lo)<=6&&Math.abs(u-hi)<=6;
+              });
+              if(!spans.some(s=>s.axis===axis&&Math.abs(s.position-v)<=4&&Math.abs(s.from-runStart)<=4&&Math.abs(s.to-u)<=4)){
+                spans.push({axis,from:runStart,to:u,spanPixels:span,position:v,viewId:matchedView?.id??null,matchesViewExtent:!!matchedView});
+              }
+            }
+            runStart=-1;
+          }
+        }
+      }
+    }
+  }
+  const primaryView=views.find(v=>v.id===analysis?.selectedId)??views[0]??null;
+  let suggestedScale=null;
+  const validDxf=dxfDimensions.filter(d=>Number.isFinite(d.mm)&&d.mm>0);
+  if(validDxf.length){
+    const withSpan=validDxf.find(d=>Number.isFinite(d.spanPixels)&&d.spanPixels>=10);
+    if(withSpan){
+      suggestedScale={dimensionMm:withSpan.mm,spanPixels:withSpan.spanPixels,metersPerPixel:withSpan.mm/1000/withSpan.spanPixels,source:'dxf-dimension-span',viewId:primaryView?.id??null};
+    }else if(primaryView){
+      const linear=validDxf.filter(d=>!d.diameter&&!d.radius).sort((a,b)=>b.mm-a.mm)[0]??validDxf[0];
+      const matchingSpan=spans.find(s=>s.viewId===primaryView.id)??spans[0];
+      const spanPixels=matchingSpan?.spanPixels??Math.max(primaryView.bounds.width,primaryView.bounds.height);
+      if(spanPixels>=10)suggestedScale={dimensionMm:linear.mm,spanPixels,metersPerPixel:linear.mm/1000/spanPixels,source:'dxf-dimension-text',viewId:primaryView.id};
+    }
+  }
+  return {spans,dxfDimensions:validDxf,suggestedScale};
 }
 
 export function engineeringCADPaths(paths,layer='__all__'){

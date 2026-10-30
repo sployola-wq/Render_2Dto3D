@@ -13,7 +13,7 @@ function mergedBox(a,b){return [Math.min(a[0],b[0]),Math.min(a[1],b[1]),Math.max
 function groupFragments(objects,context) {
   const groups=[];
   for(const object of objects) {
-    let group={id:object.id,category:object.category,bbox:[...object.bbox],objectIds:[object.id],confidence:object.confidence,reviewRequired:true};
+    let group={id:object.id,category:object.category,bbox:[...object.bbox],objectIds:[object.id],confidence:object.confidence,internalGap:0,reviewRequired:true};
     let changed=true;
     while(changed) {
       changed=false;
@@ -27,19 +27,42 @@ function groupFragments(objects,context) {
         if(group.category==='door'&&intervalOverlap<Math.min(p.to-p.from,q.to-q.from)*.7)continue;
         if(gap>Math.max(maxShort*2,(p.to-p.from+q.to-q.from)*.35))continue;
         if(gap>0) {
-          // A solid pier between close windows is not a fragmented opening.
+          // A solid pier between close windows is not a fragmented opening, unless an adjacent
+          // plumbing/kitchen fixture caused segmentation drop-out on a wall with matching sibling spans.
           const from=Math.min(p.to,q.to),to=Math.max(p.from,q.from),c=(p.c+q.c)/2;
           const strip=axis==='h'?[from,c-maxShort/2,to,c+maxShort/2]:[c-maxShort/2,from,c+maxShort/2,to];
           const fill=density(context.mask,context.width,context.height,strip);
-          if(fill===null||fill>.45)continue;
+          const combinedSpan=Math.max(p.to,q.to)-Math.min(p.from,q.from);
+          const siblingMatch=group.category==='window'&&objects.some(w=>w.category==='window'&&!group.objectIds.includes(w.id)&&!other.objectIds.includes(w.id)&&((w.bbox[2]-w.bbox[0]>=w.bbox[3]-w.bbox[1]?'h':'v')===axis)&&Math.abs(projected(w.bbox,axis).c-c)<=maxShort*1.5&&Math.abs((projected(w.bbox,axis).to-projected(w.bbox,axis).from)-combinedSpan)<=combinedSpan*.15);
+          const fixtureAdjacent=group.category==='window'&&[...(context.allObjects??[]),...(context.structuralRegions??[])].some(f=>['sink','appliance','stove','bathtub','toilet'].includes(f.category)&&overlap(axis==='h'?f.bbox[0]:f.bbox[1],axis==='h'?f.bbox[2]:f.bbox[3],from,to)>=Math.min(to-from,4)&&Math.abs((axis==='h'?(f.bbox[1]+f.bbox[3])/2:(f.bbox[0]+f.bbox[2])/2)-c)<=maxShort*3.5);
+          if(fill===null||(fill>.45&&!(siblingMatch&&fixtureAdjacent)))continue;
         }
-        group={...group,bbox:mergedBox(group.bbox,other.bbox),objectIds:[...group.objectIds,...other.objectIds],confidence:Math.max(group.confidence??0,other.confidence??0)};
+        group={...group,bbox:mergedBox(group.bbox,other.bbox),objectIds:[...group.objectIds,...other.objectIds],confidence:Math.max(group.confidence??0,other.confidence??0),internalGap:Math.max(group.internalGap??0,other.internalGap??0,gap)};
         groups.splice(i,1);changed=true;break;
       }
     }
     groups.push(group);
   }
   return groups;
+}
+function refineLeakedWindowJambLeft(mask,width,height,axis,c,thickness,runFrom,jambPos) {
+  if(!mask)return jambPos;
+  const half=Math.ceil(thickness*.85)+2,start=Math.max(Math.ceil(runFrom),Math.floor(jambPos)-45),end=Math.floor(jambPos)-1;
+  if(end-start<15)return jambPos;
+  const prof=[];
+  for(let u=start;u<=end;u++){
+    let lo=Infinity,hi=-Infinity,count=0;
+    for(let v=Math.max(0,Math.floor(c-half));v<=Math.min((axis==='h'?height:width)-1,Math.ceil(c+half));v++)if(mask[axis==='h'?v*width+u:u*width+v]){lo=Math.min(lo,v);hi=Math.max(hi,v);count++;}
+    prof.push({u,lo,hi,span:count?hi-lo+1:0});
+  }
+  for(let i=6;i<prof.length-12;i++){
+    const up=prof.slice(i-6,i),tail=prof.slice(i);
+    if(up.some(p=>!p.span)||tail.some(p=>!p.span))continue;
+    const upSpan=up[0].span;
+    if(!up.every(p=>p.span===upSpan&&p.lo===up[0].lo&&p.hi===up[0].hi))continue;
+    if(tail.every(p=>p.span<=upSpan-1)&&tail.slice(-6).every(p=>p.span<=upSpan-2))return prof[i].u;
+  }
+  return jambPos;
 }
 export function associateOpeningsDetailed(objects,runs,context={}) {
   const proposals=objects.filter(o=>['door','window'].includes(o.category));
@@ -95,10 +118,14 @@ export function associateOpeningsDetailed(objects,runs,context={}) {
       // actual corner supports can define the physical inner jamb face.
       if(best.supports[0].kind==='collinear'&&Math.abs(from-best.detectedSpan.from)>best.thickness*.6)from=best.detectedSpan.from;
       if(best.supports[1].kind==='collinear'&&Math.abs(to-best.detectedSpan.to)>best.thickness*.6)to=best.detectedSpan.to;
+    }else if(group.category==='window'&&(group.internalGap??0)>=6&&best.supports[0].kind==='collinear'){
+      const runA=solid.find(r=>r.id===best.supports[0].runId);
+      if(runA)from=refineLeakedWindowJambLeft(context.mask,context.width,context.height,best.axis,best.c,best.thickness,runA.from,from);
     }
     const collinear=best.supports.filter(s=>s.kind==='collinear');
-    const center=collinear.length?collinear.reduce((n,s)=>n+s.axisCoordinate*s.thickness,0)/collinear.reduce((n,s)=>n+s.thickness,0):best.c;
-    const opening={id:`opening-${group.objectIds.slice().sort().join('-')}`,objectIds:[...group.objectIds],category:group.category,axis:best.axis,c:center,from,to,thickness:best.thickness,confidence:group.confidence,wallId:best.supports.map(s=>s.runId).join('+'),supports:best.supports,supportSpan:{from:best.from,to:best.to},extentSource:group.category==='window'?'paired-jambs':'semantic-and-jambs',reviewRequired:true};
+    const center=collinear.length?collinear.reduce((n,s)=>n+s.axisCoordinate*s.thickness*s.thickness,0)/collinear.reduce((n,s)=>n+s.thickness*s.thickness,0):best.c;
+    const thickness=group.category==='window'&&collinear.length?Math.max(...collinear.map(s=>s.thickness)):best.thickness;
+    const opening={id:`opening-${group.objectIds.slice().sort().join('-')}`,objectIds:[...group.objectIds],category:group.category,axis:best.axis,c:center,from,to,thickness,confidence:group.confidence,wallId:best.supports.map(s=>s.runId).join('+'),supports:best.supports,supportSpan:{from:Math.min(best.from,from),to:Math.max(best.to,to)},extentSource:group.category==='window'?'paired-jambs':'semantic-and-jambs',reviewRequired:true};
     // Resolve duplicates within a category only; a door cannot become a window.
     const duplicate=openings.find(o=>o.category===opening.category&&o.axis===opening.axis&&Math.abs(o.c-opening.c)<=Math.max(o.thickness,opening.thickness)&&overlap(o.from,o.to,opening.from,opening.to)>=Math.min(o.to-o.from,opening.to-opening.from)*.65);
     const reason=best.supports.some(s=>s.kind==='corner')?'corner-jambs':'paired-collinear-jambs';

@@ -21,10 +21,10 @@
     "originalVertices": 3146,
     "cleanedVertices": 1110,
     "footprintIou": 0.9003761861091876,
-    "associatedOpenings": 31,
+    "associatedOpenings": 30,
     "unmatchedOpenings": 0,
     "rejectedOpeningFragments": 2,
-    "mergedOpeningProposals": 4,
+    "mergedOpeningProposals": 5,
     "conservativeFallback": true,
     "appliedTolerancePixels": 1.0599056603773584
   },
@@ -40,7 +40,7 @@
   },
   "openingsByCategory": {
     "door": 14,
-    "window": 17
+    "window": 16
   },
   "unmatchedOpeningIds": [],
   "furniture": {

@@ -10,7 +10,8 @@ def sha(path):
         for chunk in iter(lambda: f.read(1024 * 1024), b''): h.update(chunk)
     return h.hexdigest()
 if __name__ == '__main__':
-    for model in json.loads((ROOT / 'backend/model-manifest.json').read_text())['models']:
+    manifest=json.loads((ROOT / 'backend/model-manifest.json').read_text())
+    for model in manifest['models']+manifest.get('classifier',[])+manifest.get('exterior',[]):
         target = ROOT / model['path']
         target.parent.mkdir(parents=True, exist_ok=True)
         if target.exists():

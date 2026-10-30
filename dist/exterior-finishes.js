@@ -42,34 +42,40 @@ export function exteriorFaces(image){
     else if(r.count>w*h*.04&&cy>h*.5)role='ground';
     else if(r.count<w*h*.008&&bh>h*.009&&bw/bh>.5&&bw/bh<3&&cy>h*.22&&fill>.36&&edges.vertical>bh*1.08&&hasWindowFrame(edges,closed,w,h))role='glass';
     else if(r.count>w*h*.005&&bw/bh>.17&&bw/bh<.58&&edges.vertical>bh*.8)role='accent';
+    else if(r.count>w*h*.0012&&r.count<w*h*.012&&bw/bh>.24&&bw/bh<.56&&cy>h*.42&&fill>.75&&edges.vertical>bh*1.3)role='accent';
     else if(bh<h*.035&&bw>bh*2.2)role='trim';
-    faces.push({pixels:r.pixels,bbox:r.bbox,role,slope:edges.slope});
+    let rSum=0,gSum=0,bSum=0;if(role==='glass')for(const i of r.pixels){rSum+=image.data[i*4];gSum+=image.data[i*4+1];bSum+=image.data[i*4+2];}
+    const n=Math.max(1,r.pixels.length),tintedGlass=role==='glass'&&(gSum/n-rSum/n>=10||bSum/n-rSum/n>=8);
+    faces.push({pixels:r.pixels,bbox:r.bbox,role,slope:edges.slope,tintedGlass});
   }
   return faces;
 }
 export function exteriorPixel(part,x,y,edge,{scheme='warm',material='auto',width=1300,materials={}}={}){
   const palette=FACADE_SCHEMES[scheme]??FACADE_SCHEMES.warm,role=part.role,scale=Math.max(.35,width/1300),u=x/scale,v=(y-part.slope*x)/scale;
   const noise=(((Math.imul(x,374761393)^Math.imul(y,668265263))>>>0)%1024)/1024-.5;
-  const faceLight=part.slope>.15?1.04:part.slope<-.15?.89:.98,ao=.19*Math.exp(-edge/(2.7*scale)),sun=.035*Math.sin((x-y*.3)/Math.max(1,width)*Math.PI),bevel=edge<1.5*scale?.07:0;
-  let color=palette.wall,detail=noise*2.5,light=faceLight-ao+sun+bevel;
+  const topDist=Math.max(0,y-part.bbox[1])/scale,eaveDrop=role==='wall'?.11*Math.exp(-topDist/8.5):0;
+  const faceLight=part.slope>.15?1.04:part.slope<-.15?.89:.99,ao=.21*Math.exp(-edge/(2.9*scale)),sun=.04*Math.sin((x-y*.3)/Math.max(1,width)*Math.PI),bevel=edge<1.6*scale?.08:0;
+  let color=palette.wall,detail=noise*2.8,light=faceLight-ao-eaveDrop+sun+bevel;
   if(role==='glass'){
-    const t=(y-part.bbox[1])/Math.max(1,part.bbox[3]-part.bbox[1]),shine=Math.exp(-Math.pow((fract((u+v*.27)/95)-.35)/.065,2));
-    color=[64+76*t+shine*55,103+72*t+shine*48,126+66*t+shine*40];light=1-ao*.8;detail=noise*.6;
+    const t=(y-part.bbox[1])/Math.max(1,part.bbox[3]-part.bbox[1]),s=(x-part.bbox[0])/Math.max(1,part.bbox[2]-part.bbox[0]);
+    const shine=Math.exp(-Math.pow((fract((u+v*.27)/95)-.35)/.065,2))+.45*Math.exp(-Math.pow((fract((u+v*.27)/95)-.52)/.035,2));
+    const innerShadow=(t<.09||s<.07)?.82:1;
+    color=[58+82*t+shine*64,98+78*t+shine*56,124+70*t+shine*48];light=(1-ao*.75)*innerShadow;detail=noise*.5;
   }else if(role==='roof'){
-    color=palette.roof;const course=fract(v/9),joint=fract((u+Math.floor(v/9)%2*14)/29);detail=noise*4+(course<.10?-15:course<.18?7:0)+(joint<.035?-10:0);light=.98-ao+sun;
+    color=palette.roof;const course=fract(v/9),joint=fract((u+Math.floor(v/9)%2*14)/29);detail=noise*4+(course<.10?-16:course<.18?8:0)+(joint<.035?-11:0);light=.98-ao+sun;
   }else if(role==='ground'){
-    color=palette.ground;const mortar=fract((u+v*.35)/45)<.035||fract(v/23)<.06;detail=noise*4+(mortar?-17:1);light=1-ao*.65;
+    color=palette.ground;const mortar=fract((u+v*.35)/45)<.035||fract(v/23)<.06;detail=noise*4.2+(mortar?-18:1.5);light=1-ao*.65;
   }else if(role==='trim'){
-    color=[209,207,196];light=faceLight-ao*.7;detail=noise;
+    color=[212,209,199];light=faceLight-ao*.65+.02;detail=noise*1.2;
   }else if(material!=='auto'&&materials[material]){
-    color=materials[material].color;if(material==='wood')detail+=Math.sin(u*.65+Math.sin(v*.023)*2)*7;
-    if(materials[material].metalness>.5)light+=.16*Math.sin(v*.018)+.10*Math.exp(-Math.pow((fract(u/240)-.3)/.1,2));
+    color=materials[material].color;if(material==='wood')detail+=Math.sin(u*.65+Math.sin(v*.023)*2)*7.5;
+    if(materials[material].metalness>.5)light+=.17*Math.sin(v*.018)+.11*Math.exp(-Math.pow((fract(u/240)-.3)/.1,2));
   }else if(role==='accent'&&palette.accentType==='wood'){
-    color=palette.accent;detail+=Math.sin(u*1.8+Math.sin(v*.022)*3)*5+(fract(u/9)<.12?-25:0);
+    color=palette.accent;detail+=Math.sin(u*1.8+Math.sin(v*.022)*3)*5.5+(fract(u/9)<.12?-26:0);
   }else if(scheme==='brick'&&role==='wall'){
     color=palette.wall;const row=Math.floor(v/8),mortar=fract(v/8)<.15||fract((u+(row%2)*17)/34)<.045;detail+=mortar?34:(Math.sin(Math.floor((u+(row%2)*17)/34)*13+row*17)*7);
   }else if(role==='accent'){
-    color=palette.accent;detail+=fract(v/18)<.055?-19:noise*3;
+    color=palette.accent;detail+=fract(v/18)<.055?-20:noise*3.2;
   }
   return color.map(c=>clamp(c*light+detail));
 }

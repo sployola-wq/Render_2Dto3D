@@ -43,13 +43,27 @@ export function addEngineeringExtrusion(project,group,mpp,body){
   let rings=intervals.map(([lo,hi])=>clipped(d.profiles[0].outer,lo,hi,horizontal?0:1));
   if(rings.some(r=>r.length<3||!isSimplePolygon(r))){tabs.length=0;rings=[d.profiles[0].outer];}
   const add=(shape,length,rasterBody=false)=>{let geometry=smoothExtrusionSides(new THREE.ExtrudeGeometry(shape,{depth:length,bevelEnabled:false,curveSegments:48}));if(rasterBody&&project.params.smoothCurves!==false&&d.profiles[0]?.contourTreatment==='smoothed-image')geometry=rasterSurfaceNormals(geometry,d,mpp,horizontal);const mesh=new THREE.Mesh(geometry,body);mesh.castShadow=true;mesh.receiveShadow=true;group.add(mesh);return mesh;};
-  for(const ring of rings){const shape=new THREE.Shape(ring.map(p=>new THREE.Vector2(...point(p))));if(!tabs.length)for(const h of d.profiles[0].holes)shape.holes.push(new THREE.Path(h.map(p=>new THREE.Vector2(...point(p)))));add(shape,depth,true).position.z=-depth;}
+  let steppedCount=0;
+  if(!tabs.length&&!d.profiles[0].holes.length&&e.steppedSegments?.length>=2){
+    const steppedRings=e.steppedSegments.map(s=>({seg:s,ring:clipped(d.profiles[0].outer,s.alongStart,s.alongEnd,horizontal?0:1)}));
+    if(steppedRings.every(({ring})=>ring.length>=3&&isSimplePolygon(ring))){
+      for(const {seg,ring} of steppedRings){
+        const segDepth=Math.max(1e-4,seg.widthPixels*mpp),zOffset=(seg.zOffsetPixels??0)*mpp;
+        const shape=new THREE.Shape(ring.map(p=>new THREE.Vector2(...point(p))));
+        add(shape,segDepth,true).position.z=-zOffset-segDepth;
+      }
+      steppedCount=steppedRings.length;
+    }
+  }
+  if(!steppedCount){
+    for(const ring of rings){const shape=new THREE.Shape(ring.map(p=>new THREE.Vector2(...point(p))));if(!tabs.length)for(const h of d.profiles[0].holes)shape.holes.push(new THREE.Path(h.map(p=>new THREE.Vector2(...point(p)))));add(shape,depth,true).position.z=-depth;}
+  }
   for(const t of tabs){
     const tabPoint=(v,z)=>horizontal?[(v-(b.x0+b.x1)/2)*mpp,z*mpp]:[z*mpp,(b.y1-v)*mpp];
     const shape=new THREE.Shape([[t.y0,0],[t.y0,e.widthPixels],[t.y1,e.widthPixels],[t.y1,0]].map(([v,z])=>new THREE.Vector2(...tabPoint(v,z))));
     for(const h of t.holes){const path=new THREE.Path(),[x,y]=tabPoint(h[along],h.zPixels);path.absarc(x,y,h.radiusPixels*mpp,0,Math.PI*2,true);shape.holes.push(path);}
     const mesh=add(shape,(t.hi-t.lo)*mpp);if(horizontal){mesh.rotation.x=-Math.PI/2;mesh.position.y=(b.y1-t.hi)*mpp;}else{mesh.rotation.y=Math.PI/2;mesh.position.x=(t.lo-(b.x0+b.x1)/2)*mpp;}
   }
-  group.userData.engineeringExtrusion={source:e.source,depthMeters:depth,proposed:true,holes:tabs.flatMap(t=>t.holes)};
-  return {parts:1,assumptions:['Sección extruida; ancho proporcional a la vista complementaria. Revisa que ambas vistas usen la misma escala.',`${group.userData.engineeringExtrusion.holes.length} taladros propuestos desde círculos de la otra vista; verifica sus cotas y correspondencia.`]};
+  group.userData.engineeringExtrusion={source:e.source,depthMeters:depth,steppedSegments:steppedCount||1,proposed:true,holes:tabs.flatMap(t=>t.holes)};
+  return {parts:steppedCount||1,assumptions:['Sección extruida; ancho proporcional a la vista complementaria. Revisa que ambas vistas usen la misma escala.',`${group.userData.engineeringExtrusion.holes.length} taladros propuestos desde círculos de la otra vista; verifica sus cotas y correspondencia.`]};
 }

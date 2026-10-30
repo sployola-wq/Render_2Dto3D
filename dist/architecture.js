@@ -90,29 +90,51 @@ function maskOverlap(a,b) {
 }
 
 // Thin cross-sections identify local wall axes without reading the plan symbols.
-export function wallRuns(mask,width,height,{minimumLength}={}) {
+export function wallRuns(mask,width,height,{minimumLength,bridgeJunctions=false}={}) {
   const maxThickness=Math.max(10,Math.min(width,height)*.045),minLength=minimumLength??Math.max(9,Math.min(width,height)*.025),runs=[];
   for(const axis of ['h','v']) {
     const along=axis==='h'?width:height,across=axis==='h'?height:width;
     let active=[];const finished=[];
     for(let u=0;u<along;u++) {
-      const sections=[];
+      const raw=[];
       for(let v=0;v<across;) {
         const at=c=>axis==='h'?mask[c*width+u]:mask[u*width+c];
         if(!at(v)){v++;continue;}
         const from=v;while(v<across&&at(v))v++;
-        if(v-from<=maxThickness)sections.push({c:(from+v)/2,thickness:v-from});
+        raw.push({from,to:v});
+      }
+      const sections=[];
+      for(const seg of raw){
+        const thick=seg.to-seg.from;
+        if(thick<=maxThickness)sections.push({c:(seg.from+seg.to)/2,thickness:thick,normal:true});
+        else if(bridgeJunctions)for(const r of active){
+          const rt=median(r.widths),rlo=r.c-rt/2,rhi=r.c+rt/2;
+          if((r.junctionSpan??0)<maxThickness){
+            if(Math.abs(seg.from-rlo)<=2&&seg.to>=rhi)sections.push({c:seg.from+rt/2,thickness:rt,normal:false,forRun:r});
+            else if(Math.abs(seg.to-rhi)<=2&&seg.from<=rlo)sections.push({c:seg.to-rt/2,thickness:rt,normal:false,forRun:r});
+          }
+        }
       }
       const used=new Set();
       for(const section of sections) {
-        const match=active.filter(r=>!used.has(r)&&u-r.to<=2&&Math.abs(r.c-section.c)<=1.6&&Math.abs(median(r.widths)-section.thickness)<=Math.max(3,section.thickness*.65)).sort((a,b)=>Math.abs(a.c-section.c)-Math.abs(b.c-section.c))[0];
-        if(match){match.to=u+1;match.centers.push(section.c);match.widths.push(section.thickness);match.c=median(match.centers);used.add(match);}
-        else {const r={axis,c:section.c,from:u,to:u+1,centers:[section.c],widths:[section.thickness]};active.push(r);used.add(r);}
+        const match=section.forRun?(!used.has(section.forRun)?section.forRun:null):active.filter(r=>!used.has(r)&&u-r.to<=2&&Math.abs(r.c-section.c)<=(bridgeJunctions?1.8:1.6)&&Math.abs(median(r.widths)-section.thickness)<=Math.max(3,section.thickness*.65)).sort((a,b)=>Math.abs(a.c-section.c)-Math.abs(b.c-section.c))[0];
+        if(match){
+          match.to=u+1;
+          if(section.normal){match.lastNormalTo=u+1;match.junctionSpan=0;match.centers.push(section.c);match.widths.push(section.thickness);match.c=median(match.centers);}
+          else match.junctionSpan=(match.junctionSpan??0)+1;
+          used.add(match);
+        }else if(section.normal){
+          const r={axis,c:section.c,from:u,to:u+1,lastNormalTo:u+1,junctionSpan:0,centers:[section.c],widths:[section.thickness]};
+          active.push(r);used.add(r);
+        }
       }
       const stale=active.filter(r=>u-r.to>2);finished.push(...stale);active=active.filter(r=>u-r.to<=2);
     }
     finished.push(...active);
-    for(const r of finished)if(r.to-r.from>=minLength)runs.push({id:`axis-${runs.length+1}`,axis,c:median(r.centers),from:r.from,to:r.to,thickness:Math.max(1,median(r.widths))});
+    for(const r of finished){
+      const to=bridgeJunctions?(r.lastNormalTo??r.to):r.to;
+      if(to-r.from>=minLength)runs.push({id:`axis-${runs.length+1}`,axis,c:median(r.centers),from:r.from,to,thickness:Math.max(1,median(r.widths))});
+    }
   }
   return runs;
 }
@@ -169,10 +191,11 @@ export function reconstructArchitecture(data,{confidence=.35,openingMode='review
   const runs=wallRuns(wallMask({width,height,wallPolygons:cleaned}),width,height);
   const associationMask=wallMask({width,height,wallPolygons:cleaned});
   const typicalWallThickness=median(runs.filter(r=>r.thickness>=2).map(r=>r.thickness))||4;
-  const shortRuns=wallRuns(associationMask,width,height,{minimumLength:Math.max(6,typicalWallThickness)}).filter(r=>!runs.some(long=>long.axis===r.axis&&Math.abs(long.c-r.c)<.5&&long.from<=r.from&&long.to>=r.to)).map(r=>({...r,id:`short-${r.id}`}));
-  const openingSupportRuns=[...runs,...shortRuns];
+  const bridgedRuns=wallRuns(associationMask,width,height,{bridgeJunctions:true});
+  const shortRuns=wallRuns(associationMask,width,height,{minimumLength:Math.max(6,typicalWallThickness),bridgeJunctions:true}).filter(r=>!bridgedRuns.some(long=>long.axis===r.axis&&Math.abs(long.c-r.c)<.5&&long.from<=r.from&&long.to>=r.to)).map(r=>({...r,id:`short-${r.id}`}));
+  const openingSupportRuns=[...bridgedRuns,...shortRuns];
   const objects=(data.objects??[]).filter(o=>data.provenance?.kind==='manual-reference'||o.confidence>=confidence);
-  const association=openingMode==='legacy'?associateOpeningsLegacy(objects,runs):associateOpeningsDetailed(objects,openingSupportRuns,{mask:associationMask,width,height,typicalWallThickness});
+  const association=openingMode==='legacy'?associateOpeningsLegacy(objects,runs):associateOpeningsDetailed(objects,openingSupportRuns,{mask:associationMask,width,height,typicalWallThickness,allObjects:objects,structuralRegions:data.structuralRegions??[]});
   const {openings,unmatched}=association;
   return {version:2,width,height,imageSha256:data.imageSha256,wallPolygons:cleaned,runs,openingSupportRuns,openings,unmatchedOpeningIds:unmatched,rejectedOpeningIds:association.rejected??[],openingDiagnostics:association.diagnostics??[],openingMode,
     stats:{originalRegions:source.length,cleanedRegions:cleaned.length,originalVertices:vertices(source),cleanedVertices:vertices(cleaned),footprintIou:maskOverlap(originalMask,wallMask({width,height,wallPolygons:cleaned})),associatedOpenings:openings.length,unmatchedOpenings:unmatched.length,rejectedOpeningFragments:association.rejected?.length??0,mergedOpeningProposals:openings.reduce((n,o)=>n+o.objectIds.length-1,0),conservativeFallback:guarded,appliedTolerancePixels:appliedTolerance},
@@ -201,7 +224,7 @@ export function buildWallLevels(architecture,wallHeight) {
   return levels;
 }
 export function prepareFurniture(objects,architecture,{metersPerPixel,calibrated=false}={}) {
-  const mask=wallMask(architecture),kept=[],rejected=[];
+  const mask=wallMask(architecture),kept=[],rejected=[],warnings=[];
   for(const object of objects.filter(o=>!['door','window'].includes(o.category)).sort((a,b)=>b.confidence-a.confidence)) {
     const [x0,y0,x1,y1]=object.bbox,w=x1-x0,d=y1-y0,cx=(x0+x1)/2,cy=(y0+y1)/2;
     let reason=null,occupied=0,total=0;
@@ -209,6 +232,7 @@ export function prepareFurniture(objects,architecture,{metersPerPixel,calibrated
     if(kept.some(o=>o.category===object.category&&bboxIou(o.bbox,object.bbox)>.55))reason='duplicate';
     else if(total&&occupied/total>.35)reason='wall-overlap';
     else if(w<=0||d<=0||(calibrated&&(Math.max(w,d)*metersPerPixel>6||Math.min(w,d)*metersPerPixel<.12)))reason='implausible-size';
+    if(reason&&object.source==='user-correction'&&reason!=='duplicate'){warnings.push({id:object.id,reason});reason=null;}
     if(reason){rejected.push({id:object.id,reason});continue;}
     const sides=[];
     for(const run of architecture.runs) {
@@ -227,5 +251,5 @@ export function prepareFurniture(objects,architecture,{metersPerPixel,calibrated
     const rotated=Math.abs(Math.sin(rotation))>.5;
     kept.push({...object,placement:{widthPixels:rotated?d:w,depthPixels:rotated?w:d,rotation,orientationSource:side?'nearby-wall':'catalogue-assumption'}});
   }
-  return {objects:kept,rejected};
+  return {objects:kept,rejected,warnings};
 }

@@ -21,12 +21,12 @@ test('camera fitting contains all depth corners in front, side and rear views on
 
 test('new exterior projects open a building with depth rather than a 300 mm picture relief',async()=>{
  const {EXTERIOR_DEFAULTS}=await import('../dist/exterior-workflow.js'),r=buildDisciplineModel({...project(),params:{...params,...EXTERIOR_DEFAULTS},sourceReconstruction:(await import('../dist/registered-exterior.js')).reconstructExterior(fixture('facade'))});
- assert.equal(EXTERIOR_DEFAULTS.exteriorMode,'registered');assert.equal(EXTERIOR_DEFAULTS.depthMm,6000);assert.ok(r.group.userData.sourceRegistration);assert.ok(r.parts>1);assert.ok(r.size[2]>=6);r.dispose();
+ assert.equal(EXTERIOR_DEFAULTS.exteriorMode,'volume');assert.equal(EXTERIOR_DEFAULTS.depthMm,6000);assert.ok(r.group.userData.sourceVolume);assert.equal(r.group.userData.sourceVolume.photoProjection,false);assert.ok(r.parts>1);assert.ok(r.size[2]>=6);r.dispose();
 });
 
 test('saved v3.3 relief settings migrate to a building without changing the source, scale or material',async()=>{
  const {restoreExteriorSettings}=await import('../dist/exterior-workflow.js'),saved={...params,sourceFaithfulVersion:2,exteriorMode:'projection',depthMm:300,facadeScheme:'brick',widthMm:14000},copy=structuredClone(saved),restored=restoreExteriorSettings(saved,saved),r=buildDisciplineModel({...project(),params:restored,sourceReconstruction:(await import('../dist/registered-exterior.js')).reconstructExterior(fixture('facade'))});
- assert.equal(restored.exteriorMode,'registered');assert.equal(restored.depthMm,6000);assert.equal(restored.widthMm,14000);assert.equal(restored.facadeScheme,'brick');assert.deepEqual(saved,copy);assert.ok(r.size[2]>=6);assert.ok(r.group.getObjectByName('inferred-elevation-depth'));r.dispose();
+ assert.equal(restored.exteriorMode,'volume');assert.equal(restored.depthMm,6000);assert.equal(restored.widthMm,14000);assert.equal(restored.facadeScheme,'brick');assert.deepEqual(saved,copy);assert.ok(r.size[2]>=6);assert.ok(r.group.getObjectByName('source-building-back'));r.dispose();
 });
 
 test('changing between building and relief preserves two independent depth values and explicit choices',async()=>{

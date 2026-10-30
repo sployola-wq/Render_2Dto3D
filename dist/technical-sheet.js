@@ -12,11 +12,11 @@ const clamp=(n,a=0,b=255)=>Math.max(a,Math.min(b,n));
 function distanceField(mask,w,h){const d=new Float32Array(w*h);for(let i=0;i<d.length;i++)d[i]=mask[i]?32:0;for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=y*w+x;if(!mask[i])continue;d[i]=Math.min(d[i],x?d[i-1]+1:1,y?d[i-w]+1:1,x&&y?d[i-w-1]+1.42:32);}for(let y=h-1;y>=0;y--)for(let x=w-1;x>=0;x--){const i=y*w+x;if(!mask[i])continue;d[i]=Math.min(d[i],x<w-1?d[i+1]+1:1,y<h-1?d[i+w]+1:1,x<w-1&&y<h-1?d[i+w+1]+1.42:32);}return d;}
 function materialAt(material,role,x,y,b,edge){
   let p=SURFACE_MATERIALS[material]??SURFACE_MATERIALS.steel;
-  if(role==='glass')p={color:[143,176,192],metalness:.35,roughness:.16};
-  if(role==='roof')p={color:[133,143,151],metalness:.18,roughness:.65};
-  if(role==='ground')p={color:[216,218,211],metalness:0,roughness:.95};
+  if(role==='glass')p={color:[138,176,196],metalness:.38,roughness:.14};
+  if(role==='roof')p={color:[128,139,148],metalness:.22,roughness:.62};
+  if(role==='ground')p={color:[214,216,209],metalness:0,roughness:.95};
   const u=(x-b[0])/Math.max(1,b[2]-b[0]),v=(y-b[1])/Math.max(1,b[3]-b[1]),noise=((((Math.imul(x,374761393)^Math.imul(y,668265263))>>>0)%1024)/1024-.5);
-  const reflection=p.metalness*(.13*Math.sin(v*6.2+.4)+.2*Math.exp(-Math.pow((u-.27)/.12,2))-.13*Math.exp(-Math.pow((u-.77)/.09,2))),bevel=(edge<1.7?.18:0)-.17*Math.exp(-edge/2.1),grain=noise*(material==='wood'?5:material==='concrete'?3.4:1.5),wood=material==='wood'?Math.sin(x*.5+Math.sin(y*.025)*2)*5:0;
+  const reflection=p.metalness*(.15*Math.sin(v*6.2+.4)+.22*Math.exp(-Math.pow((u-.27)/.11,2))-.14*Math.exp(-Math.pow((u-.77)/.09,2))),bevel=(edge<1.8?.20:0)-.19*Math.exp(-edge/2.2),grain=noise*(material==='wood'?5.4:material==='concrete'?3.6:1.6),wood=material==='wood'?Math.sin(x*.5+Math.sin(y*.025)*2)*5.4:0;
   return p.color.map(c=>clamp(c*(.94+reflection+bevel)+grain+wood));
 }
 /** All surfaces come from this source. No facade template or example image enters
@@ -40,9 +40,9 @@ export function retainDrawingInk(surface,image){
   const data=new Uint8ClampedArray(surface.data);for(let i=0;i<data.length;i+=4)for(let k=0;k<3;k++)data[i+k]=Math.round(data[i+k]*image.data[i+k]/255);return {...surface,data};
 }
 export function sheetCanvas(source,options){const image=source.getContext('2d').getImageData(0,0,source.width,source.height),surface=sheetSurface(image,options),canvas=document.createElement('canvas');canvas.width=image.width;canvas.height=image.height;canvas.getContext('2d').putImageData(new ImageData(surface.data,image.width,image.height),0,0);return canvas;}
-export function completeTechnicalSheet(source,{surface,primary,primaryProfiles=[],companion=null,companionProfile=null}){
+export function completeTechnicalSheet(source,{surface,primary,primaryProfiles=[],companion=null,companionProfile=null,primaryAlpha=1}){
   const canvas=document.createElement('canvas'),density=Math.min(3,2560/Math.max(source.width,source.height));canvas.width=Math.round(source.width*density);canvas.height=Math.round(source.height*density);const c=canvas.getContext('2d');c.drawImage(surface,0,0,canvas.width,canvas.height);
-  const overlay=(image,profiles)=>{if(!image||!profiles.length)return;c.save();c.scale(canvas.width/source.width,canvas.height/source.height);c.beginPath();for(const p of profiles){p.outer.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();}c.clip();c.drawImage(image,0,0,source.width,source.height);c.restore();};
-  overlay(primary,primaryProfiles);overlay(companion,companionProfile?[companionProfile]:[]);
+  const overlay=(image,profiles,alpha=1)=>{if(!image||!profiles.length)return;c.save();c.globalAlpha=alpha;c.scale(canvas.width/source.width,canvas.height/source.height);c.beginPath();for(const p of profiles){p.outer.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();}c.clip();c.drawImage(image,0,0,source.width,source.height);c.restore();};
+  overlay(primary,primaryProfiles,primaryAlpha);overlay(companion,companionProfile?[companionProfile]:[]);
   c.globalCompositeOperation='multiply';c.drawImage(source,0,0,canvas.width,canvas.height);c.globalCompositeOperation='source-over';return canvas;
 }

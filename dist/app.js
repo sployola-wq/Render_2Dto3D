@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {requestLocalAnalysis} from './local-recognition.js';
 import { OrbitControls } from './vendor/OrbitControls.js';
 import { CATEGORY, evaluatePrediction } from './evaluation.js';
 import { buildComponents, buildArchitecturalOpenings } from './components.js?v=3';
@@ -392,7 +393,9 @@ async function loadImage(url, name, isSample = false) {
 }
 async function analyze({fresh=true}={}) {
   if(!state.image)return;
-  const id=++state.revision;state.inferenceAbort?.abort();state.inferenceAbort=new AbortController();
+  // A service started after the page opened must be usable without a reload.
+  state.localEngine=((await readJson('./api/health'))??(await readJson('./api/health')))?.ready===true;
+  state.localInferenceError=null;const id=++state.revision;state.inferenceAbort?.abort();state.inferenceAbort=new AbortController();
   $('busy').hidden=false;$('analyzeButton').disabled=true;$('geometrySource').disabled=true;
   $('exportJson').disabled=true;$('exportPng').disabled=true;$('statusText').textContent='Analizando la imagen…';
   const image=pixelContext.getImageData(0,0,pixelCanvas.width,pixelCanvas.height);
@@ -400,8 +403,7 @@ async function analyze({fresh=true}={}) {
   worker.postMessage({id,image:{width:image.width,height:image.height,data:image.data},options:{threshold:Number($('threshold').value)}},[image.data.buffer]);
   const neural=(async()=>{
     if(state.localEngine && (fresh||!state.rawPrediction)) {
-      const response=await fetch('./api/analyze',{method:'POST',headers:{'Content-Type':state.imageMime},body:state.imageBytes,signal:state.inferenceAbort.signal});
-      const result=await response.json();if(!response.ok)throw new Error(result.error??'Falló la inferencia local.');
+      const result=await requestLocalAnalysis(state.imageBytes,state.imageMime,{signal:state.inferenceAbort.signal});
       if(id!==state.revision)return null;
       if(result.imageSha256!==state.imageSha256)throw new Error('La predicción no corresponde al archivo cargado.');
       result.provenance.execution='live';return result;
@@ -414,7 +416,7 @@ async function analyze({fresh=true}={}) {
     if(geometricResult.status==='fulfilled')state.baseline={...geometricResult.value,imageSha256:state.imageSha256,objects:[],provenance:{kind:'geometric-detector'}};
     else throw geometricResult.reason;
     if(neuralResult.status==='fulfilled')state.rawPrediction=neuralResult.value;
-    else if(neuralResult.reason.name!=='AbortError')toast(`No se pudo actualizar la IA: ${neuralResult.reason.message}`);
+    else if(neuralResult.reason.name!=='AbortError'){state.localInferenceError=neuralResult.reason.message;toast(`No se pudo actualizar la IA: ${state.localInferenceError}`);}
     state.prediction=state.rawPrediction?structuredClone(state.rawPrediction):null;
     if(state.prediction && !(state.prediction.wallPolygons?.length)) {
       state.prediction.walls=structuredClone(state.baseline.walls);state.prediction.openings=structuredClone(state.baseline.openings);

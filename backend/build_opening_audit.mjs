@@ -22,9 +22,11 @@ const rows=review.cases.map(entry=>{
   const object=prediction.objects.find(o=>o.id===entry.objectId);
   if(!object||object.category!==entry.category||bboxIou(object.bbox,entry.bbox)<.99)throw new Error('La propuesta revisada cambió: '+entry.objectId);
   const diagnostic=after.openingDiagnostics.find(d=>d.objectId===entry.objectId),opening=after.openings.find(o=>o.objectIds.includes(entry.objectId)),ref=reference.objects.find(o=>o.id===entry.referenceId);
-  return {...entry,beforeStatus:before.unmatchedOpeningIds.includes(entry.objectId)?'pending':'integrated',afterStatus:diagnostic?.status??'excluded',associationReason:diagnostic?.reason,
+  const reconstructedBboxIou=opening&&ref?bboxIou(box(opening),ref.bbox):null;
+  const geometryReview=Boolean(entry.geometryReview&&!(reconstructedBboxIou!==null&&reconstructedBboxIou>=.5));
+  return {...entry,geometryReview,beforeStatus:before.unmatchedOpeningIds.includes(entry.objectId)?'pending':'integrated',afterStatus:diagnostic?.status??'excluded',associationReason:diagnostic?.reason,
     opening:opening?{id:opening.id,bbox:box(opening),axis:opening.axis,objectIds:opening.objectIds,supports:opening.supports}:null,referenceBbox:ref?.bbox,
-    reconstructedBboxIou:opening&&ref?bboxIou(box(opening),ref.bbox):null};
+    reconstructedBboxIou};
 });
 const report={version:1,imageSha256:prediction.imageSha256,predictionSha256:createHash('sha256').update(bytes).digest('hex'),confidence:.35,
   referenceReview:reference.provenance.visualReview,before:measure(before),after:measure(after),

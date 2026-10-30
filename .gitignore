@@ -6,7 +6,9 @@ tests/plan.rgba
 tests/detection.json
 *.log
 
+.venv
 .venv/
+models
 models/
 third_party/
 __pycache__/

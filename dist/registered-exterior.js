@@ -24,6 +24,41 @@ function leastSquares(rows,n){
   for(let iteration=0;iteration<Math.min(1000,n*4+40)&&rz>1e-17;iteration++){const ap=multiply(p),den=p.reduce((s,v,i)=>s+v*ap[i],0);if(Math.abs(den)<1e-25)break;const alpha=rz/den;for(let i=0;i<n;i++){x[i]+=alpha*p[i];r[i]-=alpha*ap[i];z[i]=r[i]/diag[i];}const next=r.reduce((s,v,i)=>s+v*z[i],0),beta=next/rz;for(let i=0;i<n;i++)p[i]=z[i]+beta*p[i];rz=next;}
   return x;
 }
+/** A matching photograph is insufficient: reject warped planes and depth spikes
+ * before exposing a reconstruction to orbit, measurement or STL export. */
+export function registrationQuality(registration){
+  if(!registration.faces?.length)return {valid:false,reason:'No hay caras 3D.'};
+  let maxWarp=0,maxStretch=0,maxProjectionError=0;const failures=[];
+  for(const face of registration.faces){
+    const points=face.world;if(points.some(p=>p.some(v=>!Number.isFinite(v))))return {valid:false,reason:'Coordenadas 3D no finitas.'};
+    // Use the largest triangle for the reference plane; tiny scan edges are
+    // poorly conditioned and cannot define a reliable normal.
+    const origin=points[0];let normal=null,best=0;
+    for(let i=1;i<points.length-1;i++){
+      const a=new THREE.Vector3(...points[i]).sub(new THREE.Vector3(...origin)),b=new THREE.Vector3(...points[i+1]).sub(new THREE.Vector3(...origin)),n=a.cross(b),area=n.length();
+      if(area>best){best=area;normal=n.divideScalar(area);}
+    }
+    if(normal)for(const p of [points,...(face.holesWorld??[])].flat())maxWarp=Math.max(maxWarp,Math.abs(new THREE.Vector3(...p).sub(new THREE.Vector3(...origin)).dot(normal)));
+    for(const [screen,world] of [[face.outer,face.world],...(face.holes??[]).map((r,i)=>[r,face.holesWorld[i]])])for(let i=0;i<screen.length;i++){
+      const projected=sourceProject(world[i],registration);maxProjectionError=Math.max(maxProjectionError,Math.hypot(...projected.map((v,k)=>v-screen[i][k])));
+      const j=(i+1)%screen.length,length=Math.hypot(...screen[i].map((v,k)=>v-screen[j][k]))/registration.scale;
+      if(length>2/registration.scale)maxStretch=Math.max(maxStretch,Math.hypot(...world[i].map((v,k)=>v-world[j][k]))/length);
+    }
+  }
+  if(maxWarp>.012)failures.push('Las caras no forman planos coherentes.');
+  if(maxStretch>4)failures.push('La profundidad amplifica los bordes del dibujo.');
+  if(!Number.isFinite(maxProjectionError)||maxProjectionError>1.1)failures.push('La geometría no conserva la proyección del archivo.');
+  return {valid:!failures.length,maxWarp,maxStretch,maxProjectionError,reason:failures.join(' ')};
+}
+function stableRelief(image,labels,sourceHash,rejected,sourceFaces){
+  const w=image.width,h=image.height,S=Math.max(w,h),mask=Uint8Array.from(labels,v=>v>=0?1:0),regions=connectedRegions(mask,w,h).sort((a,b)=>b.count-a.count),point=([x,y])=>[(x-w/2)/S,(h/2-y)/S,0];
+  const profiles=regions.filter(r=>r.count>=Math.max(40,(regions[0]?.count??0)*.015)).map(r=>regionProfile(r.pixels,w));
+  // Fill interior cells in the backing: windows and finishes remain in the
+  // source texture. A relief does not pretend to infer openings or hidden walls.
+  const faces=sourceFaces.map(f=>({...f,type:'front',world:f.outer.map(point),holesWorld:f.holes.map(r=>r.map(point))}));
+  if(!faces.length)throw new Error('No se pudo construir una superficie estable. Delimita el edificio.');
+  return {sourceHash,width:w,height:h,scale:S,axes:{frontElevation:true,axonometric:false,direction:[0,0,1]},faces,backingProfiles:profiles,algorithm:'source-closed-relief-v1',representation:'relief',maxBoundaryAdjustmentPixels:1.05,quality:{valid:true,fallback:true,rejected,reason:'La profundidad inferida no es coherente. Se conserva la lámina como relieve cerrado; el edificio completo necesita vistas adicionales.'}};
+}
 /** Lift every source face along its viewing ray. The source projection is an
  * invariant: no window, stair, roof edge or finish can move in the reference view. */
 export function reconstructExterior(image,{roi=null,sourceHash=null}={}){
@@ -35,7 +70,7 @@ export function reconstructExterior(image,{roi=null,sourceHash=null}={}){
   let frontier=[];for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){const i=y*w+x;if(labels[i]>=0&&[i-1,i+1,i-w,i+w].some(j=>labels[j]<0&&ink[j]))frontier.push(i);}
   for(let distance=0;distance<5&&frontier.length;distance++){const next=[];for(const i of frontier){const x=i%w;for(const j of[i-w,i+w,...(x?[i-1]:[]),...(x<w-1?[i+1]:[])])if(j>=0&&j<labels.length&&labels[j]<0&&ink[j]){labels[j]=labels[i];next.push(j);}}frontier=next;}
   const pixels=raw.map(()=>[]);for(let i=0;i<labels.length;i++)if(labels[i]>=0)pixels[labels[i]].push(i);
-  const faces=raw.map((f,id)=>({...regionProfile(pixels[id],w),id,role:f.role,slope:f.slope,area:pixels[id].length})).filter(f=>f.outer.length>=3),axes=sourceAxes(faces),byId=new Map(faces.map(f=>[f.id,f]));
+  const faces=raw.map((f,id)=>({...regionProfile(pixels[id],w),id,role:f.role,tintedGlass:f.tintedGlass,slope:f.slope,area:pixels[id].length})).filter(f=>f.outer.length>=3),axes=sourceAxes(faces),byId=new Map(faces.map(f=>[f.id,f]));
   if(!axes.axonometric){
     axes.frontElevation=true;axes.direction=[0,0,1];const point=([x,y])=>[(x-w/2)/S,(h/2-y)/S,0];
     for(const f of faces){f.type='front';f.world=f.outer.map(point);f.holesWorld=f.holes.map(r=>r.map(point));}
@@ -60,7 +95,7 @@ export function reconstructExterior(image,{roi=null,sourceHash=null}={}){
     // prevents a single roof plane from twisting relative to its own facade.
     for(let i=0;i<f.outer.length;i++){const a=f.outer[i],b=f.outer[(i+1)%f.outer.length],dx=b[0]-a[0],dy=b[1]-a[1];if(Math.hypot(dx,dy)<40||Math.abs(dx)<1)continue;const slope=dy/dx;if(Math.min(Math.abs(slope-axes.mx),Math.abs(slope+axes.mz))>.045)continue;rows.push({terms:[[f.variable,dx/S],[f.variable+1,dy/S]],value:0,weight:100000});}
   }
-  const solution=leastSquares(rows,count),height=(face,point)=>{const e=expression(face,point);return e.known+e.terms.reduce((s,[i,a])=>s+a*solution[i],0);};
+  let solution=leastSquares(rows,count);const height=(face,point)=>{const e=expression(face,point);return e.known+e.terms.reduce((s,[i,a])=>s+a*solution[i],0);};
   // Form a conforming surface: neighbouring faces share the same boundary
   // vertices and heights. This closes scan seams without changing the drawing.
   const vertices=[],grid=new Map(),bucket=(x,y)=>Math.floor(x/4)+','+Math.floor(y/4);
@@ -73,10 +108,23 @@ export function reconstructExterior(image,{roi=null,sourceHash=null}={}){
       extra.sort((a,b)=>a.t-b.t);for(const e of extra)if(result.at(-1)!==e.v){result.push(e.v);e.v.faces.add(f.id);}
     }return result;
   });
+  // Solve on the actual common contour vertices, including T-junctions. The
+  // former pixel-only fit followed by averaging could bend an entire wall.
+  // Shared boundaries must participate in the plane fit itself.
+  for(const v of vertices){
+    const adjacent=[...v.faces].map(id=>byId.get(id));
+    for(let i=1;i<adjacent.length;i++){
+      const a=expression(adjacent[0],v.point),b=expression(adjacent[i],v.point);
+      rows.push({terms:[...a.terms,...b.terms.map(([j,value])=>[j,-value])],value:b.known-a.known,weight:100000});
+    }
+  }
+  solution=leastSquares(rows,count);
   for(const v of vertices){let sum=0,total=0;for(const id of v.faces){const f=byId.get(id),weight=f.type==='ground'?100:Math.max(1,Math.sqrt(f.area)/20);sum+=height(f,v.point)*weight;total+=weight;}const y=sum/total,[x,z]=q(v.point);v.world=[x+axes.kx*y,y,z+axes.kz*y];}
   for(const f of faces){f.outer=f.rings[0].map(v=>v.point);f.holes=f.rings.slice(1).filter(r=>r.length>=3).map(r=>r.map(v=>v.point));f.world=f.rings[0].map(v=>v.world);f.holesWorld=f.rings.slice(1).filter(r=>r.length>=3).map(r=>r.map(v=>v.world));delete f.rings;}
 
-  return {sourceHash,width:w,height:h,scale:S,axes,faces,solution,algorithm:'source-face-ray-lifting-v2',maxBoundaryAdjustmentPixels:1.05};
+  const registration={sourceHash,width:w,height:h,scale:S,axes,faces,solution,algorithm:'source-face-ray-lifting-v2',maxBoundaryAdjustmentPixels:1.05};
+  registration.quality=registrationQuality(registration);
+  return registration.quality.valid?registration:stableRelief(image,labels,sourceHash,registration.quality,faces);
 }
 export function sourceProject(point,registration){
   const a=registration.axes,[x,y,z]=point,scale=registration.scale;if(a.frontElevation)return[x*scale+registration.width/2,-y*scale+registration.height/2];
@@ -84,6 +132,7 @@ export function sourceProject(point,registration){
 }
 export function addRegisteredExterior(project,group,mpp,{surfaceCanvas,own,textures}){
   const r=project.sourceReconstruction;if(!r||r.width!==project.drawing.width||r.height!==project.drawing.height||r.sourceHash&&project.sourceHash&&r.sourceHash!==project.sourceHash)throw new Error('El modelo y el Paso 2 no comparten el mismo marco de origen.');
+  if(!registrationQuality(r).valid)throw new Error('La geometría registrada no es estable. Vuelve a procesar la lámina antes de medir o exportar.');
   const scale=r.scale*mpp,texture=surfaceCanvas?new THREE.CanvasTexture(surfaceCanvas):null;if(texture){texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=8;textures.add(texture);}
   const visible=own(new THREE.MeshBasicMaterial({map:texture,color:0xffffff,side:THREE.DoubleSide,toneMapped:false}));let parts=0;
   for(const f of r.faces){const rings=[f.outer,...f.holes],points=rings.flat(),world=[f.world,...f.holesWorld].flat(),triangles=THREE.ShapeUtils.triangulateShape(f.outer.map(p=>new THREE.Vector2(...p)),f.holes.map(r=>r.map(p=>new THREE.Vector2(...p)))),positions=[],uv=[],source=[];
@@ -92,11 +141,12 @@ export function addRegisteredExterior(project,group,mpp,{surfaceCanvas,own,textu
   }
   if(r.axes.frontElevation){
     const material=own(new THREE.MeshStandardMaterial({color:'#cfc9bc',roughness:.88,side:THREE.DoubleSide}));
-    for(const profile of project.drawing.profiles??[]){const shape=new THREE.Shape(profile.outer.map(([x,y])=>new THREE.Vector2((x-r.width/2)*mpp,(r.height/2-y)*mpp))),g=new THREE.ExtrudeGeometry(shape,{depth:project.params.depthMm/1000,bevelEnabled:false});g.translate(0,0,-project.params.depthMm/1000-.001);const mesh=new THREE.Mesh(g,material);mesh.name='inferred-elevation-depth';mesh.userData.proposed=true;mesh.castShadow=mesh.receiveShadow=true;group.add(mesh);parts++;}
+    const profiles=r.representation==='relief'?r.backingProfiles:project.drawing.profiles??[],depth=(r.representation==='relief'?(project.params.reliefDepthMm??300):project.params.depthMm)/1000;
+    for(const profile of profiles){const shape=new THREE.Shape(profile.outer.map(([x,y])=>new THREE.Vector2((x-r.width/2)*mpp,(r.height/2-y)*mpp))),g=new THREE.ExtrudeGeometry(shape,{depth,bevelEnabled:false});g.translate(0,0,-depth-.001);const mesh=new THREE.Mesh(g,material);mesh.name='inferred-elevation-depth';mesh.userData.proposed=true;mesh.castShadow=mesh.receiveShadow=true;group.add(mesh);parts++;}
   }
-  group.userData.sourceRegistration={algorithm:r.algorithm,width:r.width,height:r.height,sourceHash:project.sourceHash,faces:r.faces.map(f=>({id:f.id,bounds:f.bounds,role:f.role,type:f.type})),axes:r.axes,scale:r.scale,metersPerPixel:mpp};
+  group.userData.sourceRegistration={algorithm:r.algorithm,representation:r.representation??'visible-surfaces',quality:r.quality,width:r.width,height:r.height,sourceHash:project.sourceHash,faces:r.faces.map(f=>({id:f.id,bounds:f.bounds,role:f.role,type:f.type})),axes:r.axes,scale:r.scale,metersPerPixel:mpp};
   group.userData.sourceProjection={center:[0,0,0],direction:r.axes.direction,width:r.width*mpp,height:r.height*mpp};
-  return {parts,assumptions:['Geometría y acabados registrados al mismo Paso 2: se conservan contornos, aberturas y su posición.','Profundidad aproximada a partir de caras visibles; no se agregan ventanas, accesos ni terrazas de otra propuesta.','Las caras ocultas y el interior no pueden recuperarse de una sola imagen.']};
+  return {parts,assumptions:r.representation==='relief'?[r.quality.reason,'Espesor provisional del relieve; ventanas y materiales son la imagen del Paso 2. No es una reconstrucción volumétrica del edificio.']:['Geometría y acabados registrados al mismo Paso 2: se conservan contornos, aberturas y su posición.','Profundidad aproximada a partir de caras visibles; no se agregan ventanas, accesos ni terrazas de otra propuesta.','Las caras ocultas y el interior no pueden recuperarse de una sola imagen.']};
 }
 
 export function sourceFrustum(projection,aspect,padding=1.07){const height=Math.max(projection.height,projection.width/aspect)*padding;return {width:height*aspect,height};}

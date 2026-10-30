@@ -78,3 +78,12 @@ body[data-workflow-step="1"] #comparisonPlaceholder{display:block;position:absol
 #disciplineExplode[aria-pressed=true]{border-color:var(--pro-blue);background:var(--pro-soft);color:var(--pro-blue)}
 
 @media(max-width:1150px){.header-project{display:none}.app-header{gap:12px}}
+
+/* Give the project render the usable desk height. Measurements remain in preparation. */
+body[data-workflow-step="2"][data-preview-kind="spatial"] .geometry-metrics{display:none}
+body[data-workflow-step="2"][data-preview-kind="spatial"] .board-stage{padding:18px 24px}
+
+body[data-workflow-step="2"][data-preview-kind="top"] .geometry-metrics{display:none}
+body[data-workflow-step="2"][data-preview-kind="top"] .board-stage{padding:18px 24px}
+
+@media(min-width:761px){body[data-workflow-step="2"] .flow-layout{height:calc(100dvh - 212px);min-height:0}}

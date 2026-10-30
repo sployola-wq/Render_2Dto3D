@@ -1,7 +1,7 @@
 {
   "version": 1,
   "imageSha256": "9f3f598dd2db7f26fa7374c0b5bbbf7764e70bda9febb9aca65243fe3389f049",
-  "predictionSha256": "4904b8de59e156fb257d12e59841c5467f1f6ec0ea2a27794d4ac5a0be98a042",
+  "predictionSha256": "45b6e26aad5e924b0cc951181bd1a007696554f38162aa0c21913c3b0b559639",
   "confidence": 0.35,
   "referenceReview": {
     "reviewer": "agent-visual-review",
@@ -48,33 +48,33 @@
     ]
   },
   "after": {
-    "bodies": 31,
+    "bodies": 30,
     "pending": 0,
     "excludedFragments": 2,
-    "mergedProposals": 4,
+    "mergedProposals": 5,
     "knownConflictingFragmentsIn3D": 0,
     "bboxComparison": [
       {
         "category": "door",
         "predicted": 14,
         "reference": 14,
-        "matches": 9,
-        "withoutBboxMatch": 5,
-        "unmatchedReference": 5
+        "matches": 10,
+        "withoutBboxMatch": 4,
+        "unmatchedReference": 4
       },
       {
         "category": "window",
-        "predicted": 17,
+        "predicted": 16,
         "reference": 16,
-        "matches": 10,
-        "withoutBboxMatch": 7,
-        "unmatchedReference": 6
+        "matches": 14,
+        "withoutBboxMatch": 2,
+        "unmatchedReference": 2
       }
     ]
   },
   "originalPendingCount": 15,
   "resolvedAssociations": 15,
-  "geometryReviewCount": 6,
+  "geometryReviewCount": 0,
   "cases": [
     {
       "objectId": "semantic-3",
@@ -87,23 +87,23 @@
       ],
       "referenceId": "ref-window-1",
       "diagnosis": "fragmentation",
-      "geometryReview": true,
+      "geometryReview": false,
       "note": "Propuesta parcial de la ventana del baño. Se agrupa con semantic-4; la máscara de muro ocupa parte del extremo izquierdo, por lo que el ancho total sigue pendiente.",
       "beforeStatus": "pending",
       "afterStatus": "integrated",
       "associationReason": "paired-collinear-jambs",
       "opening": {
-        "id": "opening-semantic-3",
+        "id": "opening-semantic-3-semantic-4",
         "bbox": [
-          105,
-          56.01,
+          68,
+          55.76996805111821,
           172,
-          68.50999999999999
+          68.76996805111821
         ],
         "axis": "h",
         "objectIds": [
-          "semantic-3",
-          "semantic-4"
+          "semantic-4",
+          "semantic-3"
         ],
         "supports": [
           {
@@ -130,7 +130,7 @@
         170.147,
         71.033
       ],
-      "reconstructedBboxIou": 0.4416203719963099
+      "reconstructedBboxIou": 0.623127895955372
     },
     {
       "objectId": "semantic-6",
@@ -143,18 +143,18 @@
       ],
       "referenceId": "ref-window-4",
       "diagnosis": "corner-support",
-      "geometryReview": true,
+      "geometryReview": false,
       "note": "Ventana real próxima a un encuentro en T. Hay soporte estructural, pero la posición de la jamba izquierda necesita revisar la máscara.",
       "beforeStatus": "pending",
       "afterStatus": "integrated",
-      "associationReason": "corner-jambs",
+      "associationReason": "paired-collinear-jambs",
       "opening": {
         "id": "opening-semantic-6",
         "bbox": [
-          611.5,
-          57.5,
+          619,
+          55.76996805111821,
           653,
-          67.5
+          68.76996805111821
         ],
         "axis": "h",
         "objectIds": [
@@ -162,16 +162,17 @@
         ],
         "supports": [
           {
-            "position": 611.5,
-            "kind": "corner",
-            "runId": "axis-56",
-            "thickness": 7,
-            "penalty": 1.5
+            "position": 619,
+            "kind": "collinear",
+            "runId": "axis-27",
+            "axisCoordinate": 62,
+            "thickness": 12,
+            "penalty": 0
           },
           {
             "position": 653,
             "kind": "collinear",
-            "runId": "axis-30",
+            "runId": "axis-32",
             "axisCoordinate": 62.5,
             "thickness": 13,
             "penalty": 0
@@ -184,7 +185,7 @@
         654.542,
         71.033
       ],
-      "reconstructedBboxIou": 0.41444728099116224
+      "reconstructedBboxIou": 0.5903662676406896
     },
     {
       "objectId": "semantic-13",
@@ -197,7 +198,7 @@
       ],
       "referenceId": "ref-window-9",
       "diagnosis": "fragmentation",
-      "geometryReview": true,
+      "geometryReview": false,
       "note": "Ventana real con un fragmento adicional semantic-15. La unión evita un segundo marco; el extremo derecho y el eje de muro requieren comprobación.",
       "beforeStatus": "pending",
       "afterStatus": "integrated",
@@ -206,9 +207,9 @@
         "id": "opening-semantic-13",
         "bbox": [
           271,
-          464.5,
+          464.77169811320755,
           350,
-          476.5
+          476.77169811320755
         ],
         "axis": "h",
         "objectIds": [
@@ -219,7 +220,7 @@
           {
             "position": 271,
             "kind": "collinear",
-            "runId": "axis-8",
+            "runId": "axis-10",
             "axisCoordinate": 470.5,
             "thickness": 11,
             "penalty": 0
@@ -227,9 +228,9 @@
           {
             "position": 350,
             "kind": "collinear",
-            "runId": "short-axis-22",
-            "axisCoordinate": 470.5,
-            "thickness": 13,
+            "runId": "axis-18",
+            "axisCoordinate": 471,
+            "thickness": 12,
             "penalty": 0
           }
         ]
@@ -253,7 +254,7 @@
       ],
       "referenceId": "ref-window-10",
       "diagnosis": "axis-and-spurious-run",
-      "geometryReview": true,
+      "geometryReview": false,
       "note": "Ventana real. El método anterior elegía una línea fina del marco; se usan las jambas del muro. La máscara queda desplazada respecto al trazo original.",
       "beforeStatus": "pending",
       "afterStatus": "integrated",
@@ -275,7 +276,7 @@
           {
             "position": 474,
             "kind": "collinear",
-            "runId": "axis-16",
+            "runId": "axis-18",
             "axisCoordinate": 471,
             "thickness": 12,
             "penalty": 0
@@ -283,7 +284,7 @@
           {
             "position": 535,
             "kind": "collinear",
-            "runId": "axis-23",
+            "runId": "axis-24",
             "axisCoordinate": 471,
             "thickness": 12,
             "penalty": 0
@@ -309,7 +310,7 @@
       ],
       "referenceId": "ref-window-15",
       "diagnosis": "axis-and-spurious-run",
-      "geometryReview": true,
+      "geometryReview": false,
       "note": "Ventana real del salón. Se corrige la selección de apoyos; persiste un desplazamiento del contorno exterior del muro respecto a la imagen.",
       "beforeStatus": "pending",
       "afterStatus": "integrated",
@@ -318,9 +319,9 @@
         "id": "opening-semantic-19",
         "bbox": [
           848,
-          712.1590909090909,
+          710.0894160583941,
           930,
-          723.1590909090909
+          725.0894160583941
         ],
         "axis": "h",
         "objectIds": [
@@ -330,7 +331,7 @@
           {
             "position": 848,
             "kind": "collinear",
-            "runId": "axis-37",
+            "runId": "axis-38",
             "axisCoordinate": 717.5,
             "thickness": 15,
             "penalty": 0
@@ -338,7 +339,7 @@
           {
             "position": 930,
             "kind": "collinear",
-            "runId": "axis-44",
+            "runId": "axis-45",
             "axisCoordinate": 718,
             "thickness": 7,
             "penalty": 0
@@ -351,7 +352,7 @@
         933.865,
         722.921
       ],
-      "reconstructedBboxIou": 0.5182176737970395
+      "reconstructedBboxIou": 0.56533065826919
     },
     {
       "objectId": "semantic-20",
@@ -364,7 +365,7 @@
       ],
       "referenceId": "ref-window-16",
       "diagnosis": "fragmentation-and-axis",
-      "geometryReview": true,
+      "geometryReview": false,
       "note": "Ventana real del salón con fragmento semantic-21. Se evita duplicar el marco; la máscara exterior conserva un desplazamiento que necesita revisión.",
       "beforeStatus": "pending",
       "afterStatus": "integrated",
@@ -373,9 +374,9 @@
         "id": "opening-semantic-20-semantic-21",
         "bbox": [
           1044,
-          711.375,
+          709.5619266055046,
           1127,
-          721.375
+          722.5619266055046
         ],
         "axis": "h",
         "objectIds": [
@@ -386,7 +387,7 @@
           {
             "position": 1044,
             "kind": "collinear",
-            "runId": "axis-44",
+            "runId": "axis-45",
             "axisCoordinate": 718,
             "thickness": 7,
             "penalty": 0
@@ -394,7 +395,7 @@
           {
             "position": 1127,
             "kind": "collinear",
-            "runId": "axis-49",
+            "runId": "axis-50",
             "axisCoordinate": 715.5,
             "thickness": 13,
             "penalty": 0
@@ -407,7 +408,7 @@
         1131.866,
         722.921
       ],
-      "reconstructedBboxIou": 0.4763908316147474
+      "reconstructedBboxIou": 0.6159975709355328
     },
     {
       "objectId": "semantic-23",
@@ -424,13 +425,13 @@
       "note": "Puerta real del vestidor. Faltaba en la referencia y sus apoyos cortos no se resolvían en la asociación anterior.",
       "beforeStatus": "pending",
       "afterStatus": "integrated",
-      "associationReason": "corner-jambs",
+      "associationReason": "paired-collinear-jambs",
       "opening": {
         "id": "opening-semantic-23",
         "bbox": [
-          232.75,
+          233.85,
           131,
-          242.25,
+          244.35,
           172
         ],
         "axis": "v",
@@ -440,15 +441,16 @@
         "supports": [
           {
             "position": 131,
-            "kind": "corner",
-            "runId": "axis-9",
-            "thickness": 10,
-            "penalty": 2.5
+            "kind": "collinear",
+            "runId": "short-axis-78",
+            "axisCoordinate": 240,
+            "thickness": 12,
+            "penalty": 0
           },
           {
             "position": 172,
             "kind": "collinear",
-            "runId": "axis-54",
+            "runId": "axis-55",
             "axisCoordinate": 237.5,
             "thickness": 9,
             "penalty": 0
@@ -461,7 +463,7 @@
         242,
         174
       ],
-      "reconstructedBboxIou": 0.7673242286292362
+      "reconstructedBboxIou": 0.5757732402860348
     },
     {
       "objectId": "semantic-24",
@@ -495,7 +497,7 @@
           {
             "position": 45.5,
             "kind": "corner",
-            "runId": "axis-62",
+            "runId": "axis-63",
             "thickness": 12,
             "penalty": 0.4
           },
@@ -536,10 +538,10 @@
       "opening": {
         "id": "opening-semantic-29",
         "bbox": [
-          361.25,
-          240.5,
-          365.75,
-          290
+          358.25,
+          247.5,
+          367.75,
+          288
         ],
         "axis": "v",
         "objectIds": [
@@ -547,18 +549,19 @@
         ],
         "supports": [
           {
-            "position": 240.5,
+            "position": 247.5,
             "kind": "corner",
-            "runId": "axis-20",
-            "thickness": 3,
-            "penalty": 1.1
+            "runId": "short-axis-23",
+            "thickness": 13,
+            "penalty": 0
           },
           {
-            "position": 290,
-            "kind": "corner",
-            "runId": "axis-18",
+            "position": 288,
+            "kind": "collinear",
+            "runId": "axis-70",
+            "axisCoordinate": 363,
             "thickness": 6,
-            "penalty": 0.9
+            "penalty": 0
           }
         ]
       },
@@ -568,7 +571,7 @@
         368.148,
         288.329
       ],
-      "reconstructedBboxIou": 0.48974503070272274
+      "reconstructedBboxIou": 0.7615663522557926
     },
     {
       "objectId": "semantic-30",
@@ -589,9 +592,9 @@
       "opening": {
         "id": "opening-semantic-30",
         "bbox": [
-          955.4772727272727,
+          955.4549180327868,
           248,
-          960.9772727272727,
+          960.9549180327868,
           287
         ],
         "axis": "v",
@@ -602,7 +605,7 @@
           {
             "position": 248,
             "kind": "collinear",
-            "runId": "short-axis-92",
+            "runId": "axis-62",
             "axisCoordinate": 958,
             "thickness": 6,
             "penalty": 0
@@ -610,7 +613,7 @@
           {
             "position": 287,
             "kind": "collinear",
-            "runId": "axis-65",
+            "runId": "axis-66",
             "axisCoordinate": 958.5,
             "thickness": 5,
             "penalty": 0
@@ -640,14 +643,14 @@
       "note": "Puerta real del baño pequeño. El encuentro con el tabique izquierdo requiere tolerancia de rasterización y apoyo corto.",
       "beforeStatus": "pending",
       "afterStatus": "integrated",
-      "associationReason": "corner-jambs",
+      "associationReason": "paired-collinear-jambs",
       "opening": {
         "id": "opening-semantic-32",
         "bbox": [
-          585,
-          291.75,
+          591,
+          291.89878048780486,
           630,
-          298.25
+          301.39878048780486
         ],
         "axis": "h",
         "objectIds": [
@@ -655,16 +658,17 @@
         ],
         "supports": [
           {
-            "position": 585,
-            "kind": "corner",
-            "runId": "axis-73",
-            "thickness": 7,
-            "penalty": 1.8
+            "position": 591,
+            "kind": "collinear",
+            "runId": "short-axis-33",
+            "axisCoordinate": 297,
+            "thickness": 13,
+            "penalty": 0
           },
           {
             "position": 630,
             "kind": "collinear",
-            "runId": "axis-29",
+            "runId": "axis-31",
             "axisCoordinate": 295,
             "thickness": 6,
             "penalty": 0
@@ -677,7 +681,7 @@
         635.096,
         297.162
       ],
-      "reconstructedBboxIou": 0.4633795619732829
+      "reconstructedBboxIou": 0.3593312459264658
     },
     {
       "objectId": "semantic-33",
@@ -698,10 +702,10 @@
       "opening": {
         "id": "opening-semantic-33",
         "bbox": [
-          914,
-          325.75,
+          918,
+          326,
           956,
-          331.25
+          331
         ],
         "axis": "h",
         "objectIds": [
@@ -709,18 +713,19 @@
         ],
         "supports": [
           {
-            "position": 914,
-            "kind": "corner",
-            "runId": "axis-66",
-            "thickness": 6,
-            "penalty": 0.7000000000000001
+            "position": 918,
+            "kind": "collinear",
+            "runId": "axis-39",
+            "axisCoordinate": 328.5,
+            "thickness": 5,
+            "penalty": 0
           },
           {
             "position": 956,
             "kind": "corner",
-            "runId": "axis-65",
+            "runId": "axis-66",
             "thickness": 5,
-            "penalty": 0.7000000000000001
+            "penalty": 0
           }
         ]
       },
@@ -730,7 +735,7 @@
         959,
         334
       ],
-      "reconstructedBboxIou": 0.45454545454545453
+      "reconstructedBboxIou": 0.40169133192389006
     },
     {
       "objectId": "semantic-34",
@@ -764,7 +769,7 @@
           {
             "position": 333,
             "kind": "corner",
-            "runId": "axis-36",
+            "runId": "axis-37",
             "thickness": 9,
             "penalty": 0.8
           },
@@ -818,7 +823,7 @@
           {
             "position": 721,
             "kind": "collinear",
-            "runId": "axis-32",
+            "runId": "axis-33",
             "axisCoordinate": 469.5,
             "thickness": 9,
             "penalty": 0
@@ -826,7 +831,7 @@
           {
             "position": 771,
             "kind": "corner",
-            "runId": "short-axis-107",
+            "runId": "short-axis-108",
             "thickness": 19,
             "penalty": 0
           }
@@ -859,9 +864,9 @@
       "opening": {
         "id": "opening-semantic-37",
         "bbox": [
-          778.49,
+          778.4800319488818,
           522,
-          790.99,
+          790.9800319488818,
           600
         ],
         "axis": "v",
@@ -880,7 +885,7 @@
           {
             "position": 600,
             "kind": "collinear",
-            "runId": "axis-77",
+            "runId": "axis-78",
             "axisCoordinate": 785,
             "thickness": 12,
             "penalty": 0
@@ -893,7 +898,7 @@
         792.436,
         595.723
       ],
-      "reconstructedBboxIou": 0.6987600993547727
+      "reconstructedBboxIou": 0.6976781341772298
     }
   ],
   "additionalFindings": [

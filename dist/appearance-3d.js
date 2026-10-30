@@ -14,8 +14,8 @@ export function createAppearanceLayer({canvasFactory=defaultCanvas}={}){
   const texture=(canvas)=>{const t=new THREE.CanvasTexture(canvas);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=Math.min(8,context.renderer?.capabilities?.getMaxAnisotropy?.()??1);textures.add(t);return t;};
   function pattern(kind,color){
     const c=canvasFactory(256,256),ctx=c.getContext('2d');ctx.fillStyle=color;ctx.fillRect(0,0,256,256);
-    if(kind==='wood')for(let y=0;y<256;y+=2){ctx.fillStyle=tint(color,(noise(y,13)-.5)*28);ctx.fillRect(0,y,256,1);}
-    if(kind==='fabric')for(let i=0;i<256;i+=3){ctx.fillStyle=tint(color,8);ctx.fillRect(i,0,1,256);ctx.fillStyle=tint(color,-8);ctx.fillRect(0,i,256,1);}
+    if(kind==='wood')for(let y=0;y<256;y+=2){ctx.fillStyle=tint(color,(noise(y,13)-.5)*32+Math.sin(y*.12)*6);ctx.fillRect(0,y,256,1);if(y%32===0){ctx.fillStyle=tint(color,-22);ctx.fillRect(0,y,256,1);}}
+    if(kind==='fabric')for(let i=0;i<256;i+=3){ctx.fillStyle=tint(color,9);ctx.fillRect(i,0,1,256);ctx.fillStyle=tint(color,-9);ctx.fillRect(0,i,256,1);}
     const t=texture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;
   }
   function remember(mesh){if(!originals.has(mesh))originals.set(mesh,mesh.material);}
@@ -90,9 +90,9 @@ export function createAppearanceLayer({canvasFactory=defaultCanvas}={}){
       const vertical=finish.bounds[3]-finish.bounds[1]>finish.bounds[2]-finish.bounds[0];
       tc.save();if(vertical){tc.translate(tile.width/2,tile.height/2);tc.rotate(Math.PI/2);tc.translate(-tile.height/2,-tile.width/2);}
       const a=vertical?tile.height:tile.width,b=vertical?tile.width:tile.height;
-      for(let y=0;y<b;y+=across){tc.fillStyle=tint(finish.color,(noise(y,id)-.5)*(woodFloor?24:7));tc.fillRect(0,y,a,across-1);tc.fillStyle=tint(finish.color,-18);tc.fillRect(0,y,a,1);
-        if(woodFloor)for(let line=3;line<across;line+=3){tc.fillStyle=tint(finish.color,(noise(y,line)-.5)*18);tc.fillRect(0,y+line,a,1);}
-        const stride=woodFloor?along:across;for(let x=(Math.floor(y/across)%2)*stride/2;x<a;x+=stride){tc.fillStyle=tint(finish.color,-22);tc.fillRect(x,y,1,across);}
+      for(let y=0;y<b;y+=across){tc.fillStyle=tint(finish.color,(noise(y,id)-.5)*(woodFloor?26:8));tc.fillRect(0,y,a,across-1);tc.fillStyle=tint(finish.color,-20);tc.fillRect(0,y,a,1);tc.fillStyle=tint(finish.color,woodFloor?9:6);tc.fillRect(0,y+1,a,1);
+        if(woodFloor)for(let line=3;line<across;line+=3){tc.fillStyle=tint(finish.color,(noise(y,line)-.5)*20);tc.fillRect(0,y+line,a,1);}
+        const stride=woodFloor?along:across;for(let x=(Math.floor(y/across)%2)*stride/2;x<a;x+=stride){tc.fillStyle=tint(finish.color,-24);tc.fillRect(x,y,1,across);tc.fillStyle=tint(finish.color,7);tc.fillRect(x+1,y,1,across);}
       }
       tc.restore();fc.drawImage(tile,0,0);
     }
